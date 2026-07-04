@@ -1,0 +1,72 @@
+html, body, #app {
+    height: 100%;
+}
+
+.ctr-loading {
+    padding: 2rem;
+    gap: 1rem;
+}
+
+.ctr-loading-text {
+    margin-left: 1rem;
+}
+
+/* Remote desktop console */
+.ctr-console {
+    position: relative;
+    background: #1b1d21;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ctr-console-canvas {
+    width: 100%;
+    height: 70vh;
+    min-height: 400px;
+}
+
+.ctr-console-canvas:fullscreen {
+    height: 100vh;
+}
+
+.ctr-console-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(3, 3, 3, 0.75);
+}
+
+.ctr-console-overlay .pf-v5-c-empty-state {
+    --pf-v5-c-empty-state--m-full-height--Color: #fff;
+    color: var(--pf-v5-global--Color--light-100, #fff);
+}
+
+/* Logs */
+.ctr-logs {
+    font-family: var(--pf-v5-global--FontFamily--monospace, monospace);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 60vh;
+    overflow: auto;
+    margin: 0;
+    padding: 1rem;
+    background: var(--pf-v5-global--BackgroundColor--dark-300, #212427);
+    color: var(--pf-v5-global--Color--light-100, #f0f0f0);
+    border-radius: 4px;
+}
+
+.ctr-tab-panel {
+    padding-top: 1.5rem;
+}
+
+.ctr-note-list {
+    margin: 0.5rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--pf-v5-global--Color--200);
+    font-size: 0.875rem;
+}
