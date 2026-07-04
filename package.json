@@ -1,0 +1,38 @@
+{
+  "name": "cockpitremote",
+  "version": "1.0.0",
+  "description": "Cockpit plugin providing a web-based remote desktop to the host machine (noVNC over Cockpit's authenticated WebSocket)",
+  "private": true,
+  "type": "module",
+  "license": "LGPL-2.1-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/christosdaggas/cockpitremote"
+  },
+  "scripts": {
+    "build": "NODE_ENV=production node build.js",
+    "watch": "node build.js --watch",
+    "test": "vitest run",
+    "lint": "eslint src test"
+  },
+  "dependencies": {
+    "@novnc/novnc": "1.5.0",
+    "@patternfly/react-core": "^5.4.0",
+    "@patternfly/react-icons": "^5.4.0",
+    "@patternfly/react-styles": "^5.4.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "jsdom": "^25.0.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  }
+}

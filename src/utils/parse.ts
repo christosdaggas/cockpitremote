@@ -1,0 +1,108 @@
+/*
+ * Pure parsers for machine-readable command output. Each one is fed the
+ * verbatim stdout of a command built in services/commands.ts and is tested
+ * against captured fixtures in test/parse.test.ts.
+ */
+
+import type { ListeningSocket } from "../types";
+
+/** Parses `KEY=value` line output (systemctl show, loginctl show-session). */
+export function parseKeyValueOutput(text: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const line of text.split("\n")) {
+        const idx = line.indexOf("=");
+        if (idx > 0)
+            result[line.slice(0, idx)] = line.slice(idx + 1);
+    }
+    return result;
+}
+
+/** First column of `systemctl list-unit-files --no-legend --plain` output. */
+export function parseUnitFiles(text: string): string[] {
+    return text
+        .split("\n")
+        .map(line => line.trim().split(/\s+/)[0])
+        .filter(name => name !== undefined && name.endsWith(".service"));
+}
+
+/**
+ * Parses `ss -tlnH` output. Expected line shape:
+ *   LISTEN 0 128 127.0.0.1:5901 0.0.0.0:*
+ * IPv6 local addresses look like "[::1]:5901"; wildcards like "*:5901".
+ */
+export function parseSsListening(text: string): ListeningSocket[] {
+    const sockets: ListeningSocket[] = [];
+    for (const line of text.split("\n")) {
+        const cols = line.trim().split(/\s+/);
+        if (cols.length < 4)
+            continue;
+        const local = cols[3];
+        const idx = local.lastIndexOf(":");
+        if (idx < 0)
+            continue;
+        const port = Number(local.slice(idx + 1));
+        if (!Number.isInteger(port) || port <= 0)
+            continue;
+        let address = local.slice(0, idx);
+        if (address.startsWith("[") && address.endsWith("]"))
+            address = address.slice(1, -1);
+        sockets.push({ address, port });
+    }
+    return sockets;
+}
+
+/** Parses os-release contents into a key/value map with quotes stripped. */
+export function parseOsRelease(text: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const line of text.split("\n")) {
+        const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+        if (!m)
+            continue;
+        let value = m[2];
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'")))
+            value = value.slice(1, -1);
+        result[m[1]] = value;
+    }
+    return result;
+}
+
+export interface PasswdEntry {
+    user: string;
+    uid: number;
+    gid: number;
+    home: string;
+    shell: string;
+}
+
+/** Parses one `getent passwd <user>` line. */
+export function parseGetentPasswd(text: string): PasswdEntry | null {
+    const line = text.split("\n").find(l => l.includes(":"));
+    if (!line)
+        return null;
+    const fields = line.split(":");
+    if (fields.length < 7)
+        return null;
+    const uid = Number(fields[2]);
+    const gid = Number(fields[3]);
+    if (!Number.isInteger(uid) || !Number.isInteger(gid))
+        return null;
+    return { user: fields[0], uid, gid, home: fields[5], shell: fields[6] };
+}
+
+/**
+ * First column (session id) of `loginctl list-sessions --no-legend`.
+ * Column layout differs across systemd versions, but the id is always first.
+ */
+export function parseSessionIds(text: string): string[] {
+    return text
+        .split("\n")
+        .map(line => line.trim().split(/\s+/)[0])
+        .filter(id => id !== undefined && id.length > 0);
+}
+
+/** Pulls the first version-looking token (e.g. "1.13.1") out of tool output. */
+export function extractVersion(text: string): string | null {
+    const m = /(\d+\.\d+(?:\.\d+)*)/.exec(text);
+    return m ? m[1] : null;
+}
