@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+  <id>io.github.christosdaggas.cockpitremote</id>
+  <extends>org.cockpit_project.cockpit</extends>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-2.1-or-later</project_license>
+  <name>Remote Desktop</name>
+  <summary>View and control this host's desktop from the browser</summary>
+  <developer id="io.github.christosdaggas">
+    <name>Christos A. Daggas</name>
+  </developer>
+  <bundle type="package">cockpit-cockpitremote</bundle>
+  <description>
+    <p>
+      A fully web-based remote desktop for the host machine: noVNC running in
+      the browser, tunneled through Cockpit's authenticated, TLS-encrypted
+      WebSocket. Nothing to install on the client, no extra open ports.
+    </p>
+    <p>
+      Detects TigerVNC, x11vnc, wayvnc and GNOME Remote Desktop, manages the
+      VNC service, guides setup, sets VNC passwords safely, and shows health
+      checks and service logs.
+    </p>
+  </description>
+  <launchable type="cockpit-manifest">cockpitremote</launchable>
+  <url type="homepage">https://github.com/christosdaggas/cockpitremote</url>
+  <url type="bugtracker">https://github.com/christosdaggas/cockpitremote/issues</url>
+  <releases>
+    <release version="1.0.0" date="2026-07-05" />
+  </releases>
+</component>

@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 
+import "./lib/dark-theme";
 import "@patternfly/react-core/dist/styles/base.css";
 import "./app.css";
 

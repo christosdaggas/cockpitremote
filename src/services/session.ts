@@ -14,7 +14,7 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     try {
         ids = parseSessionIds(await spawn(buildLoginctlListArgs(), { superuser: "try" }));
     } catch {
-        return { type: "none", desktop: null, display: null };
+        return { type: "none", desktop: null, display: null, user: null };
     }
 
     let sawActive = false;
@@ -31,8 +31,9 @@ export async function getSessionInfo(): Promise<SessionInfo> {
                 type: props.Type,
                 desktop: props.Desktop || null,
                 display: props.Display || null,
+                user: props.Name || null,
             };
         }
     }
-    return { type: sawActive ? "tty" : "none", desktop: null, display: null };
+    return { type: sawActive ? "tty" : "none", desktop: null, display: null, user: null };
 }

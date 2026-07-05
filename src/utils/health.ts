@@ -13,10 +13,12 @@ export interface HealthInput {
     backends: BackendInfo[];
     session: SessionInfo | null;
     sockets: ListeningSocket[];
+    /** The user this Cockpit session is logged in as, when known. */
+    loginUser?: string | null;
 }
 
 export function computeHealthChecks(input: HealthInput): HealthCheck[] {
-    const { transportAvailable, config, activeUnit, backends, session, sockets } = input;
+    const { transportAvailable, config, activeUnit, backends, session, sockets, loginUser } = input;
     const checks: HealthCheck[] = [];
 
     checks.push(transportAvailable
@@ -113,6 +115,32 @@ export function computeHealthChecks(input: HealthInput): HealthCheck[] {
         checks.push(session?.type === "wayland"
             ? { id: "session", label: "Graphical session", state: "ok", detail: `Wayland session (${session.desktop ?? "unknown compositor"})` }
             : { id: "session", label: "Graphical session", state: "warning", detail: "No active Wayland session detected." });
+    } else if (backend.id === "grd") {
+        if (!session || (session.type !== "wayland" && session.type !== "x11")) {
+            checks.push({
+                id: "session",
+                label: "Graphical session",
+                state: "warning",
+                detail: "GNOME Remote Desktop shares the active graphical session — someone must be logged into the desktop on the host.",
+            });
+        } else if (session.user && loginUser && session.user !== loginUser) {
+            checks.push({
+                id: "session",
+                label: "Graphical session",
+                state: "warning",
+                detail: `The active desktop session belongs to "${session.user}", but this Cockpit session ` +
+                    `is "${loginUser}". GNOME Remote Desktop is managed per user — the console reaches ` +
+                    `the desktop user's session, and grdctl/service actions here affect "${loginUser}" only.`,
+            });
+        } else {
+            checks.push({
+                id: "session",
+                label: "Graphical session",
+                state: "ok",
+                detail: `Active ${session.type} session${session.desktop ? ` (${session.desktop})` : ""}` +
+                    `${session.user ? ` owned by ${session.user}` : ""}`,
+            });
+        }
     }
 
     return checks;

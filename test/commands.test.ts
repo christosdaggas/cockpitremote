@@ -4,6 +4,7 @@ import {
     buildChmodArgs,
     buildChownArgs,
     buildGetentPasswdArgs,
+    buildGrdctlStatusArgs,
     buildInstallPackagesArgs,
     buildJournalArgs,
     buildListUnitFilesArgs,
@@ -23,6 +24,11 @@ describe("buildSystemctlActionArgs", () => {
             .toEqual(["systemctl", "restart", "vncserver@:1.service"]);
         expect(buildSystemctlActionArgs("enable", "x11vnc.service"))
             .toEqual(["systemctl", "enable", "x11vnc.service"]);
+    });
+
+    it("addresses the session manager for user-scoped units", () => {
+        expect(buildSystemctlActionArgs("start", "gnome-remote-desktop.service", "user"))
+            .toEqual(["systemctl", "--user", "start", "gnome-remote-desktop.service"]);
     });
 
     it("rejects unknown actions", () => {
@@ -45,6 +51,14 @@ describe("buildSystemctlShowArgs", () => {
     it("asks for a fixed property list", () => {
         expect(buildSystemctlShowArgs("wayvnc.service")).toEqual([
             "systemctl", "show", "wayvnc.service",
+            "--property=LoadState,ActiveState,SubState,UnitFileState,ExecMainStatus",
+            "--no-pager",
+        ]);
+    });
+
+    it("supports user scope", () => {
+        expect(buildSystemctlShowArgs("gnome-remote-desktop.service", "user")).toEqual([
+            "systemctl", "--user", "show", "gnome-remote-desktop.service",
             "--property=LoadState,ActiveState,SubState,UnitFileState,ExecMainStatus",
             "--no-pager",
         ]);
@@ -73,6 +87,13 @@ describe("buildJournalArgs", () => {
     it("rejects unit injection", () => {
         expect(() => buildJournalArgs("-u root.service", 200)).toThrow(ValidationError);
     });
+
+    it("reads the user journal for user-scoped units", () => {
+        expect(buildJournalArgs("gnome-remote-desktop.service", 200, null, "user")).toEqual([
+            "journalctl", "--user", "-u", "gnome-remote-desktop.service",
+            "-n", "200", "--no-pager", "-o", "short-iso",
+        ]);
+    });
 });
 
 describe("buildListUnitFilesArgs", () => {
@@ -87,6 +108,19 @@ describe("buildListUnitFilesArgs", () => {
         expect(() => buildListUnitFilesArgs(["$(x)*"])).toThrow(ValidationError);
         expect(() => buildListUnitFilesArgs(["--all"])).toThrow(ValidationError);
         expect(() => buildListUnitFilesArgs(["a b*"])).toThrow(ValidationError);
+    });
+
+    it("supports user scope", () => {
+        expect(buildListUnitFilesArgs(["gnome-remote-desktop*"], "user")).toEqual([
+            "systemctl", "--user", "list-unit-files", "--type=service",
+            "--no-legend", "--no-pager", "--plain", "gnome-remote-desktop*",
+        ]);
+    });
+});
+
+describe("buildGrdctlStatusArgs", () => {
+    it("takes no arguments at all", () => {
+        expect(buildGrdctlStatusArgs()).toEqual(["grdctl", "status"]);
     });
 });
 
@@ -145,9 +179,12 @@ describe("buildInstallPackagesArgs", () => {
 });
 
 describe("buildLoginctlShowSessionArgs", () => {
-    it("validates the session id", () => {
+    it("uses one --property flag per name (loginctl ignores comma lists)", () => {
         expect(buildLoginctlShowSessionArgs("c2")).toEqual([
-            "loginctl", "show-session", "c2", "--property=Id,Type,Desktop,Display,Active,Class",
+            "loginctl", "show-session", "c2",
+            "--property=Id", "--property=Type", "--property=Desktop",
+            "--property=Display", "--property=Active", "--property=Class",
+            "--property=Name",
         ]);
         expect(() => buildLoginctlShowSessionArgs("c2; reboot")).toThrow(ValidationError);
     });

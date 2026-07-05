@@ -5,7 +5,7 @@
  * codebase, so nothing here can be turned into shell injection.
  */
 
-import type { SystemdAction } from "../types";
+import type { SystemdAction, UnitScope } from "../types";
 import {
     ValidationError,
     validateBinaryName,
@@ -20,15 +20,20 @@ import { LOG_LINE_CHOICES } from "../constants";
 
 const SYSTEMD_ACTIONS: readonly SystemdAction[] = ["start", "stop", "restart", "enable", "disable"];
 
-export function buildSystemctlActionArgs(action: SystemdAction, unit: string): string[] {
-    if (!SYSTEMD_ACTIONS.includes(action))
-        throw new ValidationError(`Unsupported systemd action: ${JSON.stringify(action)}.`);
-    return ["systemctl", action, validateUnitName(unit)];
+/** "--user" targets the caller's session manager (GNOME Remote Desktop). */
+function systemctlBase(scope: UnitScope): string[] {
+    return scope === "user" ? ["systemctl", "--user"] : ["systemctl"];
 }
 
-export function buildSystemctlShowArgs(unit: string): string[] {
+export function buildSystemctlActionArgs(action: SystemdAction, unit: string, scope: UnitScope = "system"): string[] {
+    if (!SYSTEMD_ACTIONS.includes(action))
+        throw new ValidationError(`Unsupported systemd action: ${JSON.stringify(action)}.`);
+    return [...systemctlBase(scope), action, validateUnitName(unit)];
+}
+
+export function buildSystemctlShowArgs(unit: string, scope: UnitScope = "system"): string[] {
     return [
-        "systemctl", "show", validateUnitName(unit),
+        ...systemctlBase(scope), "show", validateUnitName(unit),
         "--property=LoadState,ActiveState,SubState,UnitFileState,ExecMainStatus",
         "--no-pager",
     ];
@@ -37,28 +42,36 @@ export function buildSystemctlShowArgs(unit: string): string[] {
 /** Glob patterns here are plugin constants, never user input — still checked. */
 const UNIT_GLOB_RE = /^[A-Za-z0-9@:._*?-]+$/;
 
-export function buildListUnitFilesArgs(patterns: string[]): string[] {
+export function buildListUnitFilesArgs(patterns: string[], scope: UnitScope = "system"): string[] {
     for (const pattern of patterns) {
         if (!UNIT_GLOB_RE.test(pattern) || pattern.startsWith("-"))
             throw new ValidationError(`Invalid unit pattern: ${JSON.stringify(pattern)}.`);
     }
     return [
-        "systemctl", "list-unit-files", "--type=service",
+        ...systemctlBase(scope), "list-unit-files", "--type=service",
         "--no-legend", "--no-pager", "--plain", ...patterns,
     ];
 }
 
-export function buildJournalArgs(unit: string, lines: number, priority?: number | null): string[] {
+export function buildJournalArgs(unit: string, lines: number, priority?: number | null, scope: UnitScope = "system"): string[] {
     validateUnitName(unit);
     if (!(LOG_LINE_CHOICES as readonly number[]).includes(lines))
         throw new ValidationError(`Unsupported log line count: ${JSON.stringify(lines)}.`);
-    const args = ["journalctl", "-u", unit, "-n", String(lines), "--no-pager", "-o", "short-iso"];
+    const args = ["journalctl"];
+    if (scope === "user")
+        args.push("--user");
+    args.push("-u", unit, "-n", String(lines), "--no-pager", "-o", "short-iso");
     if (priority !== undefined && priority !== null) {
         if (!Number.isInteger(priority) || priority < 0 || priority > 7)
             throw new ValidationError(`Invalid journal priority: ${JSON.stringify(priority)}.`);
         args.push("-p", String(priority));
     }
     return args;
+}
+
+/** grdctl reads the calling user's GNOME Remote Desktop configuration. */
+export function buildGrdctlStatusArgs(): string[] {
+    return ["grdctl", "status"];
 }
 
 export function buildSsListeningArgs(): string[] {
@@ -129,9 +142,13 @@ export function buildLoginctlListArgs(): string[] {
 }
 
 export function buildLoginctlShowSessionArgs(sessionId: string): string[] {
+    // One --property flag per name: unlike systemctl, loginctl silently
+    // prints nothing for a comma-separated property list.
     return [
         "loginctl", "show-session", validateSessionId(sessionId),
-        "--property=Id,Type,Desktop,Display,Active,Class",
+        "--property=Id", "--property=Type", "--property=Desktop",
+        "--property=Display", "--property=Active", "--property=Class",
+        "--property=Name",
     ];
 }
 

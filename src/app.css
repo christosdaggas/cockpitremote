@@ -2,6 +2,95 @@ html, body, #app {
     height: 100%;
 }
 
+body {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    background: #f2f2f2;
+}
+
+.ctr-page {
+    min-height: 100%;
+    padding: 4px 28px 32px;
+    background: #f2f2f2;
+}
+
+.pf-v5-theme-dark body,
+.pf-v5-theme-dark .ctr-page {
+    background: #151515;
+}
+
+.ctr-page-header {
+    padding: 16px 20px 0;
+}
+
+.ctr-page-tabs {
+    margin-block-start: 0;
+}
+
+.ctr-page-main {
+    padding: 16px 20px 0;
+}
+
+.ctr-page .pf-v5-c-card {
+    overflow: hidden;
+    background: #fff;
+    border: 0;
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+.ctr-page .pf-v5-c-card::before,
+.ctr-page .pf-v5-c-card::after {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+.pf-v5-theme-dark .ctr-page .pf-v5-c-card {
+    background: #292929;
+}
+
+.ctr-page .pf-v5-c-card__title,
+.ctr-page .pf-v5-c-card__header,
+.ctr-page .pf-v5-c-card__body,
+.ctr-page .pf-v5-c-card__footer {
+    color: inherit;
+}
+
+.ctr-page .pf-v5-c-card__title {
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.ctr-page .pf-v5-c-card__body,
+.ctr-page .pf-v5-c-card__footer {
+    font-size: 0.875rem;
+}
+
+.ctr-dashboard-panel {
+    background: transparent;
+}
+
+.ctr-health-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pf-v5-global--spacer--md);
+    margin-block-end: var(--pf-v5-global--spacer--md);
+}
+
+.ctr-setup-guide-panel {
+    padding: var(--pf-v5-global--spacer--lg);
+    background: #fff;
+    border-radius: 16px;
+}
+
+.pf-v5-theme-dark .ctr-setup-guide-panel {
+    background: #292929;
+}
+
 .ctr-loading {
     padding: 2rem;
     gap: 1rem;
@@ -12,10 +101,33 @@ html, body, #app {
 }
 
 /* Remote desktop console */
+.ctr-console-panel {
+    padding: var(--pf-v5-global--spacer--lg);
+    background: #fff;
+    border-radius: 16px;
+}
+
+.pf-v5-theme-dark .ctr-console-panel {
+    background: #292929;
+}
+
+.pf-v5-c-toolbar.ctr-console-toolbar,
+.ctr-console-toolbar .pf-v5-c-toolbar__content {
+    background: transparent;
+}
+
+.pf-v5-c-toolbar.ctr-console-toolbar {
+    padding-block: 0;
+}
+
+.ctr-console-toolbar .pf-v5-c-toolbar__content {
+    padding-inline: 0;
+}
+
 .ctr-console {
     position: relative;
     background: #1b1d21;
-    border-radius: 4px;
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
     overflow: hidden;
 }
 
@@ -45,6 +157,29 @@ html, body, #app {
 }
 
 /* Logs */
+.ctr-logs-panel {
+    padding: var(--pf-v5-global--spacer--lg);
+    background: #fff;
+    border-radius: 16px;
+}
+
+.pf-v5-theme-dark .ctr-logs-panel {
+    background: #292929;
+}
+
+.pf-v5-c-toolbar.ctr-logs-toolbar,
+.ctr-logs-toolbar .pf-v5-c-toolbar__content {
+    background: transparent;
+}
+
+.pf-v5-c-toolbar.ctr-logs-toolbar {
+    padding-block: 0;
+}
+
+.ctr-logs-toolbar .pf-v5-c-toolbar__content {
+    padding-inline: 0;
+}
+
 .ctr-logs {
     font-family: var(--pf-v5-global--FontFamily--monospace, monospace);
     font-size: 0.8125rem;
@@ -53,15 +188,75 @@ html, body, #app {
     word-break: break-all;
     max-height: 60vh;
     overflow: auto;
-    margin: 0;
+    margin: var(--pf-v5-global--spacer--md) 0 0;
     padding: 1rem;
     background: var(--pf-v5-global--BackgroundColor--dark-300, #212427);
     color: var(--pf-v5-global--Color--light-100, #f0f0f0);
-    border-radius: 4px;
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
 }
 
-.ctr-tab-panel {
-    padding-top: 1.5rem;
+.pf-v5-l-gallery.ctr-dashboard-gallery {
+    --pf-v5-l-gallery--GridTemplateColumns: repeat(4, minmax(0, 1fr));
+    --pf-v5-l-gallery--GridTemplateColumns--min: 320px;
+    align-items: start;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ctr-health-card .pf-v5-c-description-list {
+    --pf-v5-c-description-list--RowGap: var(--pf-v5-global--spacer--sm);
+}
+
+.pf-v5-l-gallery.ctr-dashboard-gallery > .ctr-health-card {
+    grid-column: 1 / -1;
+}
+
+.pf-v5-l-gallery.ctr-dashboard-gallery > .ctr-backends-panel {
+    grid-column: 1 / -1;
+}
+
+.ctr-backends-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ctr-backend-column {
+    min-width: 0;
+    padding: 0 var(--pf-v5-global--spacer--lg);
+}
+
+.ctr-backend-column:first-child {
+    padding-inline-start: 0;
+}
+
+.ctr-backend-column:last-child {
+    padding-inline-end: 0;
+}
+
+.ctr-backend-column + .ctr-backend-column {
+    border-inline-start: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.pf-v5-theme-dark .ctr-backend-column + .ctr-backend-column {
+    border-inline-start-color: rgba(255, 255, 255, 0.12);
+}
+
+.ctr-backend-column-title {
+    margin: 0 0 var(--pf-v5-global--spacer--md);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.ctr-backend-column-selected .ctr-backend-column-title {
+    color: var(--pf-v5-global--primary-color--100);
+}
+
+.ctr-backend-column-footer {
+    margin-block-start: var(--pf-v5-global--spacer--md);
+}
+
+.ctr-backend-column-footer:empty {
+    display: none;
 }
 
 .ctr-note-list {
@@ -69,4 +264,58 @@ html, body, #app {
     padding-left: 1.25rem;
     color: var(--pf-v5-global--Color--200);
     font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .ctr-page {
+        padding-inline: 0;
+    }
+
+    .ctr-page-header,
+    .ctr-page-main {
+        padding-inline: var(--pf-v5-global--spacer--md);
+    }
+
+    .ctr-console-canvas {
+        height: 60vh;
+        min-height: 280px;
+    }
+
+    .pf-v5-l-gallery.ctr-dashboard-gallery {
+        --pf-v5-l-gallery--GridTemplateColumns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    }
+
+    .pf-v5-l-gallery.ctr-dashboard-gallery > .ctr-health-card {
+        grid-column: auto;
+    }
+
+    .pf-v5-l-gallery.ctr-dashboard-gallery > .ctr-backends-panel {
+        grid-column: auto;
+    }
+
+    .ctr-backends-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ctr-backend-column {
+        padding: var(--pf-v5-global--spacer--lg) 0;
+    }
+
+    .ctr-backend-column:first-child {
+        padding-block-start: 0;
+    }
+
+    .ctr-backend-column:last-child {
+        padding-block-end: 0;
+    }
+
+    .ctr-backend-column + .ctr-backend-column {
+        border-block-start: 1px solid rgba(0, 0, 0, 0.12);
+        border-inline-start: 0;
+    }
+
+    .pf-v5-theme-dark .ctr-backend-column + .ctr-backend-column {
+        border-block-start-color: rgba(255, 255, 255, 0.12);
+    }
 }

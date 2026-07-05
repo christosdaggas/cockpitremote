@@ -1,4 +1,4 @@
-import type { BackendId, UiPrefs } from "./types";
+import type { BackendId, UiPrefs, UnitScope } from "./types";
 
 /** Machine-wide plugin configuration (JSON), readable by any admin session. */
 export const CONFIG_PATH = "/etc/cockpit/cockpitremote.json";
@@ -41,6 +41,8 @@ export interface BackendDef {
     unitPrefix: string;
     /** Startable unit suggested when only a template/none is found. */
     defaultUnit: string;
+    /** Whether the unit lives in the system or the user's session manager. */
+    unitScope: UnitScope;
     defaultPort: number;
     description: string;
     packages: { dnf: string; apt: string; zypper: string };
@@ -48,6 +50,8 @@ export interface BackendDef {
     supportsPasswordTool: boolean;
     /** Whether connecting/managing it is supported by this plugin version. */
     manageable: boolean;
+    /** Whether the setup guide should offer to install it when missing. */
+    offerInstall: boolean;
 }
 
 export const BACKENDS: BackendDef[] = [
@@ -58,6 +62,7 @@ export const BACKENDS: BackendDef[] = [
         versionFlag: "-version",
         unitPrefix: "vncserver@",
         defaultUnit: "vncserver@:1.service",
+        unitScope: "system",
         defaultPort: 5901,
         description:
             "Runs a separate virtual desktop session on the host. Recommended for servers " +
@@ -70,6 +75,7 @@ export const BACKENDS: BackendDef[] = [
         },
         supportsPasswordTool: true,
         manageable: true,
+        offerInstall: true,
     },
     {
         id: "x11vnc",
@@ -78,6 +84,7 @@ export const BACKENDS: BackendDef[] = [
         versionFlag: "-version",
         unitPrefix: "x11vnc",
         defaultUnit: "x11vnc.service",
+        unitScope: "system",
         defaultPort: 5900,
         description:
             "Mirrors an already-running X11 session (the physical monitor). Requires the " +
@@ -85,6 +92,7 @@ export const BACKENDS: BackendDef[] = [
         packages: { dnf: "x11vnc", apt: "x11vnc", zypper: "x11vnc" },
         supportsPasswordTool: true,
         manageable: true,
+        offerInstall: true,
     },
     {
         id: "wayvnc",
@@ -93,6 +101,7 @@ export const BACKENDS: BackendDef[] = [
         versionFlag: "--version",
         unitPrefix: "wayvnc",
         defaultUnit: "wayvnc.service",
+        unitScope: "system",
         defaultPort: 5900,
         description:
             "Shares a Wayland session on wlroots-based compositors (Sway, Hyprland, ...). " +
@@ -100,6 +109,7 @@ export const BACKENDS: BackendDef[] = [
         packages: { dnf: "wayvnc", apt: "wayvnc", zypper: "wayvnc" },
         supportsPasswordTool: false,
         manageable: true,
+        offerInstall: true,
     },
     {
         id: "grd",
@@ -108,18 +118,21 @@ export const BACKENDS: BackendDef[] = [
         versionFlag: "--version",
         unitPrefix: "gnome-remote-desktop",
         defaultUnit: "gnome-remote-desktop.service",
+        unitScope: "user",
         defaultPort: 5900,
         description:
-            "GNOME's built-in remote desktop. Recent versions are RDP-only (VNC support " +
-            "was deprecated and removed), so this plugin detects it for information but " +
-            "cannot connect to it.",
+            "GNOME's built-in remote desktop, sharing the logged-in user's session. " +
+            "Upstream is moving to RDP-only, but many distribution builds (Fedora among " +
+            "them) still ship the VNC backend — when it is detected, the console can " +
+            "connect to it. Configured per user with grdctl.",
         packages: {
             dnf: "gnome-remote-desktop",
             apt: "gnome-remote-desktop",
             zypper: "gnome-remote-desktop",
         },
         supportsPasswordTool: false,
-        manageable: false,
+        manageable: true,
+        offerInstall: false,
     },
 ];
 

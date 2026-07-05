@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     extractVersion,
     parseGetentPasswd,
+    parseGrdStatus,
     parseKeyValueOutput,
     parseOsRelease,
     parseSessionIds,
@@ -132,6 +133,86 @@ describe("parseSessionIds", () => {
     it("handles no sessions", () => {
         expect(parseSessionIds("")).toEqual([]);
         expect(parseSessionIds("\n")).toEqual([]);
+    });
+});
+
+describe("parseGrdStatus", () => {
+    // Captured verbatim from grdctl 50.1 on Fedora 44.
+    const withVnc = [
+        "Overall:",
+        "\tUnit status: active",
+        "RDP:",
+        "\tStatus: enabled",
+        "\tPort: 3389",
+        "\tTLS certificate: /home/alice/.local/share/gnome-remote-desktop/certificates/rdp-tls.crt",
+        "\tView-only: no",
+        "\tUsername: (hidden)",
+        "VNC:",
+        "\tStatus: disabled",
+        "\tPort: 5900",
+        "\tAuth method: prompt",
+        "\tView-only: yes",
+        "\tNegotiate port: no",
+        "\tPassword: (empty)",
+        "",
+    ].join("\n");
+
+    it("reports VNC capability, enablement, port, view-only and auth", () => {
+        expect(parseGrdStatus(withVnc)).toEqual({
+            hasVnc: true,
+            vncEnabled: false,
+            vncPort: 5900,
+            vncViewOnly: true,
+            vncAuthMethod: "prompt",
+            vncPasswordEmpty: true,
+        });
+    });
+
+    it("reads an enabled, controllable VNC section", () => {
+        const enabled = withVnc
+            .replace("\tStatus: disabled", "\tStatus: enabled")
+            .replace("\tView-only: yes", "\tView-only: no")
+            .replace("\tAuth method: prompt", "\tAuth method: password")
+            .replace("\tPassword: (empty)", "\tPassword: (hidden)");
+        expect(parseGrdStatus(enabled)).toEqual({
+            hasVnc: true,
+            vncEnabled: true,
+            vncPort: 5900,
+            vncViewOnly: false,
+            vncAuthMethod: "password",
+            vncPasswordEmpty: false,
+        });
+    });
+
+    it("detects RDP-only builds (no VNC section)", () => {
+        const rdpOnly = withVnc.split("VNC:")[0];
+        expect(parseGrdStatus(rdpOnly)).toEqual({
+            hasVnc: false,
+            vncEnabled: false,
+            vncPort: null,
+            vncViewOnly: false,
+            vncAuthMethod: null,
+            vncPasswordEmpty: false,
+        });
+    });
+
+    it("does not read RDP fields as VNC fields", () => {
+        // RDP is enabled on port 3389; VNC must not inherit either value.
+        expect(parseGrdStatus(withVnc).vncPort).toBe(5900);
+        const vncFirst = parseGrdStatus(withVnc.split("VNC:")[0] + "VNC:\n\tAuth method: prompt\n");
+        expect(vncFirst).toEqual({
+            hasVnc: true,
+            vncEnabled: false,
+            vncPort: null,
+            vncViewOnly: false,
+            vncAuthMethod: "prompt",
+            vncPasswordEmpty: false,
+        });
+    });
+
+    it("tolerates empty and garbage output", () => {
+        expect(parseGrdStatus("").hasVnc).toBe(false);
+        expect(parseGrdStatus("error: cannot connect to the display\n").hasVnc).toBe(false);
     });
 });
 

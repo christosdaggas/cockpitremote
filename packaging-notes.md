@@ -1,7 +1,18 @@
 # Packaging notes for cockpitremote
 
-This document describes how to package the plugin as RPM and DEB. There is no
-CI packaging yet; these notes are the blueprint for it.
+This document describes how to package the plugin as RPM and DEB. A working
+spec lives at `cockpit-cockpitremote.spec` in the repository root; there is no
+CI packaging yet.
+
+The package also installs `io.github.christosdaggas.cockpitremote.metainfo.xml`
+to `/usr/share/metainfo/` (done by `make install`). The metainfo declares the
+Cockpit launchable and the owning package name (`cockpit-cockpitremote`), so
+Cockpit's *Applications* page can show it and remove it via PackageKit when it
+was installed as a real RPM/DEB package.
+
+Manual installs and `make devel-install` are not PackageKit-managed. Remove
+those with `make uninstall PREFIX=/usr`/`make uninstall` or
+`make devel-uninstall` instead.
 
 ## What gets installed
 
@@ -76,6 +87,7 @@ make install PREFIX=/usr DESTDIR=%{buildroot}
 %license LICENSE
 %doc README.md
 /usr/share/cockpit/cockpitremote
+/usr/share/metainfo/io.github.christosdaggas.cockpitremote.metainfo.xml
 ```
 
 ## DEB outline

@@ -8,9 +8,6 @@ import {
     Gallery,
     Stack,
     StackItem,
-    Toolbar,
-    ToolbarContent,
-    ToolbarItem,
 } from "@patternfly/react-core";
 import { SyncAltIcon } from "@patternfly/react-icons";
 
@@ -37,7 +34,7 @@ export interface DashboardTabProps {
 
 export function DashboardTab({ data, config, activeUnit, saveConfig }: DashboardTabProps) {
     const notify = useNotify();
-    const { backends, session, sockets, loading, error, refresh } = data;
+    const { backends, session, sockets, loginUser, loading, error, refresh } = data;
     const [os, setOs] = useState<OsInfo | null>(null);
 
     useEffect(() => {
@@ -58,7 +55,7 @@ export function DashboardTab({ data, config, activeUnit, saveConfig }: Dashboard
             ...config,
             backend: backend.id,
             unit,
-            port: display !== null ? portForDisplay(display) : def.defaultPort,
+            port: display !== null ? portForDisplay(display) : (backend.detectedPort ?? def.defaultPort),
         };
         try {
             await saveConfig(next);
@@ -76,55 +73,54 @@ export function DashboardTab({ data, config, activeUnit, saveConfig }: Dashboard
         backends: backends ?? [],
         session,
         sockets,
+        loginUser,
     });
 
     return (
-        <Stack hasGutter>
+        <Stack hasGutter className="ctr-dashboard">
             <StackItem>
-                <Toolbar inset={{ default: "insetNone" }}>
-                    <ToolbarContent>
-                        <ToolbarItem>
-                            <Button variant="secondary" icon={<SyncAltIcon />} onClick={() => refresh()}
-                                    isLoading={loading} isDisabled={loading}>
-                                Refresh
-                            </Button>
-                        </ToolbarItem>
-                        {session && (
-                            <ToolbarItem alignSelf="center">
-                                Host graphical session:{" "}
-                                <strong>
-                                    {session.type === "none" ? "none" : session.type}
-                                    {session.desktop ? ` (${session.desktop})` : ""}
-                                </strong>
-                            </ToolbarItem>
-                        )}
-                    </ToolbarContent>
-                </Toolbar>
-                {error && <Alert variant="warning" isInline title={error} />}
-            </StackItem>
-
-            <StackItem>
-                <Card>
-                    <CardTitle>Health</CardTitle>
-                    <CardBody>
-                        <HealthChecks checks={checks} />
-                    </CardBody>
-                </Card>
-            </StackItem>
-
-            <StackItem>
-                <Gallery hasGutter minWidths={{ default: "320px" }}>
-                    {(backends ?? []).map(backend => (
-                        <BackendCard
-                            key={backend.id}
-                            backend={backend}
-                            isSelected={config.backend === backend.id}
-                            activeUnit={config.backend === backend.id ? activeUnit : null}
-                            onSelect={selectBackend}
-                            onRefresh={refresh}
-                        />
-                    ))}
-                </Gallery>
+                <section className="ctr-dashboard-panel">
+                    {error && <Alert variant="warning" isInline title={error} className="pf-v5-u-mb-md" />}
+                    <Gallery hasGutter minWidths={{ default: "320px" }} className="ctr-dashboard-gallery">
+                        <Card className="ctr-health-card">
+                            <CardTitle>Health</CardTitle>
+                            <CardBody>
+                                <div className="ctr-health-actions">
+                                    <Button variant="secondary" icon={<SyncAltIcon />} onClick={() => refresh()}
+                                            isLoading={loading} isDisabled={loading}>
+                                        Refresh
+                                    </Button>
+                                    {session && (
+                                        <span className="ctr-session-summary">
+                                            Host graphical session: <strong>
+                                                {session.type === "none" ? "none" : session.type}
+                                                {session.desktop ? ` (${session.desktop})` : ""}
+                                            </strong>
+                                        </span>
+                                    )}
+                                </div>
+                                <HealthChecks checks={checks} />
+                            </CardBody>
+                        </Card>
+                        <Card className="ctr-backends-panel">
+                            <CardTitle>VNC backends</CardTitle>
+                            <CardBody>
+                                <div className="ctr-backends-grid">
+                                    {(backends ?? []).map(backend => (
+                                        <BackendCard
+                                            key={backend.id}
+                                            backend={backend}
+                                            isSelected={config.backend === backend.id}
+                                            activeUnit={config.backend === backend.id ? activeUnit : null}
+                                            onSelect={selectBackend}
+                                            onRefresh={refresh}
+                                        />
+                                    ))}
+                                </div>
+                            </CardBody>
+                        </Card>
+                    </Gallery>
+                </section>
             </StackItem>
 
             <StackItem>

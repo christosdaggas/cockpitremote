@@ -47,7 +47,10 @@ export function SetupGuide({ os, backends, onRefresh, defaultExpanded }: SetupGu
 
     const pm = os?.packageManager ?? null;
     const missing = BACKENDS.filter(def =>
-        def.manageable && !backends.find(b => b.id === def.id)?.binaryPath);
+        def.offerInstall && !backends.find(b => b.id === def.id)?.binaryPath);
+    // Keyed on what actually works, not on the installable list: GNOME
+    // Remote Desktop is never offered for install but may already serve VNC.
+    const anyInstalled = backends.some(b => b.binaryPath !== null && b.supported);
 
     const install = async (def: BackendDef) => {
         if (!pm)
@@ -67,15 +70,16 @@ export function SetupGuide({ os, backends, onRefresh, defaultExpanded }: SetupGu
 
     return (
         <ExpandableSection toggleText="Setup guide" isIndented displaySize="lg"
+                           className="ctr-setup-guide-panel"
                            isExpanded={expanded} onToggle={(_e, value) => setExpanded(value)}>
             <Stack hasGutter>
-                {missing.length === 0 && (
+                {anyInstalled && (
                     <StackItem>
                         <Alert variant="success" isInline isPlain
-                               title="A VNC server is installed. Configure and start it below or in Settings." />
+                               title="A usable VNC server is installed. Configure and start it above or in Settings." />
                     </StackItem>
                 )}
-                {missing.length > 0 && (
+                {!anyInstalled && missing.length > 0 && (
                     <StackItem>
                         <p>
                             A VNC server must be installed <strong>on this host</strong> (nothing is ever

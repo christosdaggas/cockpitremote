@@ -11,6 +11,7 @@ function tigervncBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
         binaryPath: "/usr/bin/Xvnc",
         version: "1.13.1",
         detectedUnit: "vncserver@:1.service",
+        unitScope: "system",
         status: {
             exists: true,
             loadState: "loaded",
@@ -22,6 +23,7 @@ function tigervncBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
         supported: true,
         notes: [],
         defaultPort: 5901,
+        detectedPort: null,
         ...overrides,
     };
 }
@@ -40,7 +42,7 @@ describe("computeHealthChecks", () => {
             config,
             activeUnit: "vncserver@:1.service",
             backends: [tigervncBackend()],
-            session: { type: "wayland", desktop: "GNOME", display: null },
+            session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
             sockets: [{ address: "127.0.0.1", port: 5901 }],
         });
         expect(checks.every(c => c.state === "ok")).toBe(true);
@@ -116,5 +118,46 @@ describe("computeHealthChecks", () => {
             sockets: [],
         });
         expect(checks.find(c => c.id === "unit")?.state).toBe("error");
+    });
+
+    it("warns when the desktop session belongs to a different user than the Cockpit login (grd)", () => {
+        const grdBackend = tigervncBackend({
+            id: "grd",
+            label: "GNOME Remote Desktop",
+            binaryPath: "/usr/bin/grdctl",
+            detectedUnit: "gnome-remote-desktop.service",
+            unitScope: "user",
+        });
+        const grdConfig: RemoteConfig = {
+            ...DEFAULT_CONFIG,
+            backend: "grd",
+            unit: "gnome-remote-desktop.service",
+            port: 5900,
+        };
+        const base = {
+            transportAvailable: true,
+            config: grdConfig,
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend],
+            sockets: [{ address: "*", port: 5900 }],
+        };
+
+        const mismatch = computeHealthChecks({
+            ...base,
+            session: { type: "wayland" as const, desktop: "GNOME", display: null, user: "alice" },
+            loginUser: "bob",
+        });
+        expect(mismatch.find(c => c.id === "session")?.state).toBe("warning");
+        expect(mismatch.find(c => c.id === "session")?.detail).toMatch(/alice/);
+
+        const match = computeHealthChecks({
+            ...base,
+            session: { type: "wayland" as const, desktop: "GNOME", display: null, user: "alice" },
+            loginUser: "alice",
+        });
+        expect(match.find(c => c.id === "session")?.state).toBe("ok");
+
+        const noDesktop = computeHealthChecks({ ...base, session: null, loginUser: "alice" });
+        expect(noDesktop.find(c => c.id === "session")?.state).toBe("warning");
     });
 });

@@ -34,7 +34,7 @@ export function ConsoleToolbar({ state, prefs, updatePrefs, onConnect, onDisconn
 
     return (
         <>
-            <Toolbar inset={{ default: "insetNone" }}>
+            <Toolbar inset={{ default: "insetNone" }} className="ctr-console-toolbar">
                 <ToolbarContent>
                     <ToolbarGroup>
                         <ToolbarItem>

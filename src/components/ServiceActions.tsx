@@ -3,12 +3,13 @@ import { Button, Flex, FlexItem } from "@patternfly/react-core";
 
 import { useNotify } from "../notifications";
 import { serviceAction } from "../services/systemd";
-import type { ServiceStatus, SystemdAction } from "../types";
+import type { ServiceStatus, SystemdAction, UnitScope } from "../types";
 import { isCancelled, toUserMessage } from "../utils/errors";
 import { ConfirmDialog } from "./common/ConfirmDialog";
 
 export interface ServiceActionsProps {
     unit: string;
+    scope: UnitScope;
     status: ServiceStatus | null;
     onRefresh: () => Promise<void>;
 }
@@ -29,7 +30,7 @@ const CONFIRMABLE: Partial<Record<SystemdAction, { title: string; body: string }
     },
 };
 
-export function ServiceActions({ unit, status, onRefresh }: ServiceActionsProps) {
+export function ServiceActions({ unit, scope, status, onRefresh }: ServiceActionsProps) {
     const notify = useNotify();
     const [busy, setBusy] = useState<SystemdAction | null>(null);
     const [pendingConfirm, setPendingConfirm] = useState<SystemdAction | null>(null);
@@ -37,7 +38,7 @@ export function ServiceActions({ unit, status, onRefresh }: ServiceActionsProps)
     const run = async (action: SystemdAction) => {
         setBusy(action);
         try {
-            await serviceAction(action, unit);
+            await serviceAction(action, unit, scope);
             notify("success", `${capitalize(action)} succeeded`, unit);
         } catch (err) {
             if (!isCancelled(err))

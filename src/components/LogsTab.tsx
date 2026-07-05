@@ -16,18 +16,19 @@ import { ListIcon, SyncAltIcon } from "@patternfly/react-icons";
 
 import { LOG_LINE_CHOICES, LOG_PRIORITIES } from "../constants";
 import { fetchLogs } from "../services/journal";
-import type { UiPrefs } from "../types";
+import type { UiPrefs, UnitScope } from "../types";
 import { toUserMessage } from "../utils/errors";
 import { Loading } from "./common/Loading";
 
 export interface LogsTabProps {
     unit: string;
+    scope: UnitScope;
     prefs: UiPrefs;
     updatePrefs: (patch: Partial<UiPrefs>) => void;
     isActive: boolean;
 }
 
-export function LogsTab({ unit, prefs, updatePrefs, isActive }: LogsTabProps) {
+export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabProps) {
     const [logs, setLogs] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -38,13 +39,13 @@ export function LogsTab({ unit, prefs, updatePrefs, isActive }: LogsTabProps) {
         setLoading(true);
         setError(null);
         try {
-            setLogs(await fetchLogs(unit, prefs.logLines, prefs.logPriority));
+            setLogs(await fetchLogs(unit, prefs.logLines, prefs.logPriority, scope));
         } catch (err) {
             setError(toUserMessage(err, `Could not read the journal for ${unit}`));
         } finally {
             setLoading(false);
         }
-    }, [unit, prefs.logLines, prefs.logPriority]);
+    }, [unit, scope, prefs.logLines, prefs.logPriority]);
 
     // Load lazily: only fetch once the tab is actually shown.
     useEffect(() => {
@@ -65,8 +66,8 @@ export function LogsTab({ unit, prefs, updatePrefs, isActive }: LogsTabProps) {
     }
 
     return (
-        <>
-            <Toolbar inset={{ default: "insetNone" }}>
+        <div className="ctr-logs-panel">
+            <Toolbar inset={{ default: "insetNone" }} className="ctr-logs-toolbar">
                 <ToolbarContent>
                     <ToolbarItem>
                         <Button variant="secondary" icon={<SyncAltIcon />} onClick={refresh}
@@ -115,6 +116,6 @@ export function LogsTab({ unit, prefs, updatePrefs, isActive }: LogsTabProps) {
                         )
                         : <pre className="ctr-logs">{logs}</pre>
                 )}
-        </>
+        </div>
     );
 }

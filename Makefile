@@ -13,6 +13,8 @@ PACKAGE = cockpitremote
 PREFIX ?= /usr/local
 DESTDIR ?=
 INSTALLDIR = $(DESTDIR)$(PREFIX)/share/cockpit/$(PACKAGE)
+METAINFODIR = $(DESTDIR)$(PREFIX)/share/metainfo
+METAINFO = io.github.christosdaggas.cockpitremote.metainfo.xml
 DEVDIR = $(HOME)/.local/share/cockpit/$(PACKAGE)
 
 all: build
@@ -30,9 +32,12 @@ node_modules: package.json
 install: build
 	mkdir -p $(INSTALLDIR)
 	cp -r dist/. $(INSTALLDIR)/
+	mkdir -p $(METAINFODIR)
+	cp $(METAINFO) $(METAINFODIR)/
 
 uninstall:
 	rm -rf $(INSTALLDIR)
+	rm -f $(METAINFODIR)/$(METAINFO)
 
 devel-install: build
 	mkdir -p $(dir $(DEVDIR))

@@ -15,19 +15,21 @@ import { CogIcon } from "@patternfly/react-icons";
 
 import { backendDef } from "../constants";
 import { useRfb } from "../hooks/useRfb";
-import type { RemoteConfig, UiPrefs } from "../types";
+import type { BackendInfo, RemoteConfig, UiPrefs } from "../types";
 import { ConsoleToolbar } from "./ConsoleToolbar";
 import { CredentialsModal } from "./CredentialsModal";
 import { VncScreen } from "./VncScreen";
 
 export interface RemoteDesktopTabProps {
     config: RemoteConfig;
+    /** Detection results; null while the first inspection is running. */
+    backends: BackendInfo[] | null;
     prefs: UiPrefs;
     updatePrefs: (patch: Partial<UiPrefs>) => void;
     onGoToDashboard: () => void;
 }
 
-export function RemoteDesktopTab({ config, prefs, updatePrefs, onGoToDashboard }: RemoteDesktopTabProps) {
+export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToDashboard }: RemoteDesktopTabProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const rfb = useRfb(containerRef, prefs);
 
@@ -62,16 +64,21 @@ export function RemoteDesktopTab({ config, prefs, updatePrefs, onGoToDashboard }
     const def = backendDef(config.backend);
     const target = `${config.address}:${config.port}`;
 
-    if (!def.manageable) {
+    // Static gate for backend kinds this plugin cannot drive, plus the
+    // runtime gate for hosts where detection ruled the backend out (e.g. an
+    // RDP-only GNOME Remote Desktop build). Unknown (null) detection does
+    // not block — connecting is harmless and the Dashboard explains state.
+    const info = backends?.find(b => b.id === config.backend);
+    if (!def.manageable || info?.supported === false) {
         return (
             <Alert variant="info" isInline title={`${def.label} cannot be used for the console`}>
-                {def.description}
+                {info?.notes.length ? info.notes.join(" ") : def.description}
             </Alert>
         );
     }
 
     return (
-        <Stack hasGutter>
+        <Stack hasGutter className="ctr-console-panel">
             <StackItem>
                 <ConsoleToolbar
                     state={rfb.state}

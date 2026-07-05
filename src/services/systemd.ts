@@ -1,4 +1,4 @@
-import type { ServiceStatus, SystemdAction } from "../types";
+import type { ServiceStatus, SystemdAction, UnitScope } from "../types";
 import { parseKeyValueOutput } from "../utils/parse";
 import { buildSystemctlActionArgs, buildSystemctlShowArgs } from "./commands";
 import { spawn } from "./spawn";
@@ -7,9 +7,14 @@ import { spawn } from "./spawn";
  * `systemctl show` exits 0 even for unknown units and reports
  * LoadState=not-found, which lets us distinguish "missing unit" from real
  * errors (permissions, missing systemctl, ...).
+ *
+ * User-scoped units (`systemctl --user`) must run as the logged-in Cockpit
+ * user — never through the superuser bridge, where "--user" would address
+ * root's (usually nonexistent) session manager instead.
  */
-export async function getServiceStatus(unit: string): Promise<ServiceStatus> {
-    const output = await spawn(buildSystemctlShowArgs(unit), { superuser: "try" });
+export async function getServiceStatus(unit: string, scope: UnitScope = "system"): Promise<ServiceStatus> {
+    const output = await spawn(buildSystemctlShowArgs(unit, scope),
+                               scope === "system" ? { superuser: "try" } : {});
     const props = parseKeyValueOutput(output);
     const execMainStatus = Number(props.ExecMainStatus);
     return {
@@ -22,6 +27,7 @@ export async function getServiceStatus(unit: string): Promise<ServiceStatus> {
     };
 }
 
-export async function serviceAction(action: SystemdAction, unit: string): Promise<void> {
-    await spawn(buildSystemctlActionArgs(action, unit), { superuser: "require" });
+export async function serviceAction(action: SystemdAction, unit: string, scope: UnitScope = "system"): Promise<void> {
+    await spawn(buildSystemctlActionArgs(action, unit, scope),
+                scope === "system" ? { superuser: "require" } : {});
 }

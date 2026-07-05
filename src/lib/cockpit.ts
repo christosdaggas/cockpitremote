@@ -50,11 +50,20 @@ export interface Transport {
     close(problem?: string): void;
 }
 
+export interface UserInfo {
+    name: string;
+    full_name: string;
+    home: string;
+    shell: string;
+    groups: string[];
+}
+
 export interface Cockpit {
     spawn(args: string[], options?: SpawnOptions & { binary?: false | undefined }): SpawnProcess<string>;
     spawn(args: string[], options: SpawnOptions & { binary: true }): SpawnProcess<Uint8Array>;
     file(path: string, options?: FileOptions & { binary?: false | undefined }): FileHandle<string>;
     file(path: string, options: FileOptions & { binary: true }): FileHandle<Uint8Array>;
+    user(): Promise<UserInfo>;
     transport?: Transport;
     gettext(text: string): string;
 }

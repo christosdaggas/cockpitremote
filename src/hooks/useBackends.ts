@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import cockpit from "../lib/cockpit";
 import { detectBackends } from "../services/backends";
 import { getListeningSockets } from "../services/network";
 import { getSessionInfo } from "../services/session";
@@ -10,6 +11,8 @@ export interface BackendsData {
     backends: BackendInfo[] | null;
     session: SessionInfo | null;
     sockets: ListeningSocket[];
+    /** The user this Cockpit session runs as (null until resolved). */
+    loginUser: string | null;
     loading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
@@ -19,8 +22,13 @@ export function useBackends(): BackendsData {
     const [backends, setBackends] = useState<BackendInfo[] | null>(null);
     const [session, setSession] = useState<SessionInfo | null>(null);
     const [sockets, setSockets] = useState<ListeningSocket[]>([]);
+    const [loginUser, setLoginUser] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        cockpit.user().then(user => setLoginUser(user.name)).catch(() => setLoginUser(null));
+    }, []);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -45,5 +53,5 @@ export function useBackends(): BackendsData {
         refresh();
     }, [refresh]);
 
-    return { backends, session, sockets, loading, error, refresh };
+    return { backends, session, sockets, loginUser, loading, error, refresh };
 }

@@ -18,7 +18,7 @@ import {
 
 import { BACKENDS, backendDef } from "../constants";
 import { useNotify } from "../notifications";
-import type { BackendId, RemoteConfig } from "../types";
+import type { BackendId, BackendInfo, RemoteConfig } from "../types";
 import { toUserMessage } from "../utils/errors";
 import {
     ValidationError,
@@ -37,6 +37,8 @@ import { PasswordModal } from "./PasswordModal";
 export interface SettingsTabProps {
     config: RemoteConfig;
     save: (next: RemoteConfig) => Promise<void>;
+    /** Detection results, used to gate and pre-fill backend choices. */
+    backends: BackendInfo[] | null;
 }
 
 interface FormState {
@@ -101,7 +103,7 @@ function validateForm(form: FormState): { errors: Errors; config?: RemoteConfig 
     };
 }
 
-export function SettingsTab({ config, save }: SettingsTabProps) {
+export function SettingsTab({ config, save, backends }: SettingsTabProps) {
     const notify = useNotify();
     const [form, setForm] = useState<FormState>(() => fromConfig(config));
     const [errors, setErrors] = useState<Errors>({});
@@ -125,13 +127,21 @@ export function SettingsTab({ config, save }: SettingsTabProps) {
             if (!value)
                 return { ...prev, backend: "" };
             const def = backendDef(value as BackendId);
-            const unit = prev.unit || def.defaultUnit;
+            const info = backends?.find(b => b.id === value);
+            // A unit is kept only when it belongs to the selected backend —
+            // carrying another backend's unit across yields a broken mix
+            // (wrong systemd scope, wrong service).
+            const unit = prev.unit && prev.unit.startsWith(def.unitPrefix)
+                ? prev.unit
+                : (info?.detectedUnit ?? def.defaultUnit);
             const display = displayFromUnit(unit);
             return {
                 ...prev,
                 backend: value,
                 unit,
-                port: String(display !== null ? portForDisplay(display) : def.defaultPort),
+                port: String(display !== null
+                    ? portForDisplay(display)
+                    : (info?.detectedPort ?? def.defaultPort)),
             };
         });
         setErrors({});
@@ -158,6 +168,9 @@ export function SettingsTab({ config, save }: SettingsTabProps) {
     const selectedDef = form.backend ? backendDef(form.backend as BackendId) : null;
     const portNum = Number(form.port);
     const portAdvice = !errors.port && Number.isInteger(portNum) ? portWarning(portNum) : null;
+    const unitAdvice = !errors.unit && selectedDef && form.unit && !form.unit.startsWith(selectedDef.unitPrefix)
+        ? `This does not look like a ${selectedDef.label} unit — its default is "${selectedDef.defaultUnit}".`
+        : null;
 
     const helper = (field: keyof FormState, advice?: string | null) => {
         const message = errors[field] ?? advice;
@@ -182,11 +195,15 @@ export function SettingsTab({ config, save }: SettingsTabProps) {
                                     onChange={(_event, value) => onBackendChange(value)}
                                     aria-label="VNC backend">
                             <FormSelectOption value="" label="— none selected —" />
-                            {BACKENDS.map(def => (
-                                <FormSelectOption key={def.id} value={def.id}
-                                                  label={def.manageable ? def.label : `${def.label} (informational only)`}
-                                                  isDisabled={!def.manageable} />
-                            ))}
+                            {BACKENDS.map(def => {
+                                const info = backends?.find(b => b.id === def.id);
+                                const unusable = !def.manageable || info?.supported === false;
+                                return (
+                                    <FormSelectOption key={def.id} value={def.id}
+                                                      label={unusable ? `${def.label} (not usable on this host)` : def.label}
+                                                      isDisabled={unusable} />
+                                );
+                            })}
                         </FormSelect>
                         {selectedDef && (
                             <FormHelperText>
@@ -203,7 +220,7 @@ export function SettingsTab({ config, save }: SettingsTabProps) {
                                    validated={errors.unit ? "error" : "default"}
                                    placeholder="vncserver@:1.service"
                                    aria-label="systemd unit" />
-                        {helper("unit")}
+                        {helper("unit", unitAdvice)}
                     </FormGroup>
 
                     <FormGroup label="VNC address" fieldId="ctr-address">
@@ -248,6 +265,11 @@ export function SettingsTab({ config, save }: SettingsTabProps) {
                     {selectedDef?.id === "wayvnc" && (
                         <Alert variant="info" isInline isPlain
                                title="wayvnc authentication is configured in its own config file (TLS/PAM); this plugin does not manage wayvnc passwords." />
+                    )}
+
+                    {selectedDef?.id === "grd" && (
+                        <Alert variant="info" isInline isPlain
+                               title="GNOME Remote Desktop runs per user and is configured with grdctl. Whether its VNC backend is available depends on the distribution build — the Dashboard shows what was detected." />
                     )}
 
                     <ActionGroup>

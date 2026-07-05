@@ -1,10 +1,5 @@
 import {
     Button,
-    Card,
-    CardBody,
-    CardFooter,
-    CardHeader,
-    CardTitle,
     DescriptionList,
     DescriptionListDescription,
     DescriptionListGroup,
@@ -31,11 +26,9 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
     const unit = (isSelected && activeUnit) || backend.detectedUnit;
 
     return (
-        <Card isSelected={isSelected}>
-            <CardHeader>
-                <CardTitle>{backend.label}</CardTitle>
-            </CardHeader>
-            <CardBody>
+        <section className={`ctr-backend-column${isSelected ? " ctr-backend-column-selected" : ""}`}>
+            <h3 className="ctr-backend-column-title">{backend.label}</h3>
+            <div className="ctr-backend-column-body">
                 <LabelGroup>
                     {installed
                         ? <Label color="blue">installed{backend.version ? ` ${backend.version}` : ""}</Label>
@@ -54,7 +47,9 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                     {unit && (
                         <DescriptionListGroup>
                             <DescriptionListTerm>Unit</DescriptionListTerm>
-                            <DescriptionListDescription>{unit}</DescriptionListDescription>
+                            <DescriptionListDescription>
+                                {unit}{backend.unitScope === "user" ? " (user service)" : ""}
+                            </DescriptionListDescription>
                         </DescriptionListGroup>
                     )}
                 </DescriptionList>
@@ -63,11 +58,12 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                         {backend.notes.map((note, i) => <li key={i}>{note}</li>)}
                     </ul>
                 )}
-            </CardBody>
-            <CardFooter>
+            </div>
+            <div className="ctr-backend-column-footer">
                 {installed && unit && backend.supported && (
                     <div className="pf-v5-u-mb-sm">
-                        <ServiceActions unit={unit} status={backend.status} onRefresh={onRefresh} />
+                        <ServiceActions unit={unit} scope={backend.unitScope}
+                                        status={backend.status} onRefresh={onRefresh} />
                     </div>
                 )}
                 {installed && backend.supported && !isSelected && (
@@ -75,7 +71,7 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                         Use this backend
                     </Button>
                 )}
-            </CardFooter>
-        </Card>
+            </div>
+        </section>
     );
 }

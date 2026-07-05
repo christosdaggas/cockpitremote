@@ -44,13 +44,15 @@ Tested target platforms (Cockpit ≥ 266, i.e. any 2022+ release):
 ### Which VNC backend should I use?
 
 - **TigerVNC (recommended, and the primary supported path).** Runs a separate
-  *virtual* desktop session on the host — ideal for servers and required on
-  modern Fedora/RHEL Workstation, where the physical GNOME **Wayland** session
-  cannot be shared over VNC at all (x11vnc needs Xorg, wayvnc needs a wlroots
-  compositor, and GNOME Remote Desktop dropped VNC in favor of RDP).
+  *virtual* desktop session on the host — ideal for servers and for headless
+  use, independent of whatever is on the physical screen.
+- **GNOME Remote Desktop.** Shares the physical GNOME session (Wayland or
+  Xorg). Upstream is moving to RDP-only, but many distribution builds (Fedora
+  among them) still ship the VNC backend — the plugin probes `grdctl status`
+  and, when VNC is available, connects to it and manages the per-user service
+  (`systemctl --user`). RDP-only builds are shown for information.
 - **x11vnc.** Mirrors the physical monitor, but only for Xorg sessions.
 - **wayvnc.** Only for wlroots compositors (Sway, Hyprland, …).
-- **GNOME Remote Desktop** is detected and shown for information only.
 
 ## Requirements
 

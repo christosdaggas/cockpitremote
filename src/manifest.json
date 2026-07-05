@@ -6,6 +6,7 @@
   "tools": {
     "index": {
       "label": "Remote Desktop",
+      "order": 45,
       "path": "index.html",
       "keywords": [
         {

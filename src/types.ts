@@ -2,6 +2,13 @@ export type BackendId = "tigervnc" | "x11vnc" | "wayvnc" | "grd";
 
 export type SystemdAction = "start" | "stop" | "restart" | "enable" | "disable";
 
+/**
+ * Which systemd manager owns a backend's unit: the system manager, or the
+ * Cockpit user's session manager (`systemctl --user`, as GNOME Remote
+ * Desktop uses).
+ */
+export type UnitScope = "system" | "user";
+
 export interface ServiceStatus {
     exists: boolean;
     loadState: string;
@@ -15,6 +22,8 @@ export interface SessionInfo {
     type: "x11" | "wayland" | "tty" | "none";
     desktop: string | null;
     display: string | null;
+    /** Unix user owning the session (logind "Name"). */
+    user: string | null;
 }
 
 export interface BackendInfo {
@@ -23,10 +32,13 @@ export interface BackendInfo {
     binaryPath: string | null;
     version: string | null;
     detectedUnit: string | null;
+    unitScope: UnitScope;
     status: ServiceStatus | null;
     supported: boolean;
     notes: string[];
     defaultPort: number;
+    /** Port the backend reports it actually uses (grdctl), when known. */
+    detectedPort: number | null;
 }
 
 export interface ListeningSocket {

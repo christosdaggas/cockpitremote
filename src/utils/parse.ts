@@ -106,3 +106,61 @@ export function extractVersion(text: string): string | null {
     const m = /(\d+\.\d+(?:\.\d+)*)/.exec(text);
     return m ? m[1] : null;
 }
+
+export interface GrdStatus {
+    /** False when the installed build was compiled without the VNC backend. */
+    hasVnc: boolean;
+    vncEnabled: boolean;
+    vncPort: number | null;
+    vncViewOnly: boolean;
+    /** "prompt" (approve on the desktop) or "password". */
+    vncAuthMethod: string | null;
+    /** True when password auth is selected but no password is stored. */
+    vncPasswordEmpty: boolean;
+}
+
+/**
+ * Parses `grdctl status` output. The output is grouped into sections whose
+ * headers ("Overall:", "RDP:", "VNC:") start at column 0; the fields below
+ * them are indented ("\tStatus: enabled"). RDP-only builds print no VNC
+ * section at all, which is exactly the capability signal we need.
+ */
+export function parseGrdStatus(text: string): GrdStatus {
+    const status: GrdStatus = {
+        hasVnc: false,
+        vncEnabled: false,
+        vncPort: null,
+        vncViewOnly: false,
+        vncAuthMethod: null,
+        vncPasswordEmpty: false,
+    };
+    let inVnc = false;
+    for (const line of text.split("\n")) {
+        if (/^\S/.test(line)) {
+            inVnc = line.trim() === "VNC:";
+            if (inVnc)
+                status.hasVnc = true;
+            continue;
+        }
+        if (!inVnc)
+            continue;
+        const idx = line.indexOf(":");
+        if (idx < 0)
+            continue;
+        const key = line.slice(0, idx).trim();
+        const value = line.slice(idx + 1).trim();
+        if (key === "Status")
+            status.vncEnabled = value === "enabled";
+        else if (key === "Port") {
+            const port = Number(value);
+            if (Number.isInteger(port) && port > 0)
+                status.vncPort = port;
+        } else if (key === "View-only")
+            status.vncViewOnly = value === "yes";
+        else if (key === "Auth method")
+            status.vncAuthMethod = value || null;
+        else if (key === "Password")
+            status.vncPasswordEmpty = value === "(empty)";
+    }
+    return status;
+}
