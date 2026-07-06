@@ -1,7 +1,7 @@
 {
   "name": "cockpitremote",
   "version": "1.0.0",
-  "description": "Cockpit plugin providing a web-based remote desktop to the host machine (noVNC over Cockpit's authenticated WebSocket)",
+  "description": "Cockpit plugin providing a web-based GNOME Remote Desktop console via Guacamole/guacd",
   "private": true,
   "type": "module",
   "license": "LGPL-2.1-or-later",
@@ -16,10 +16,10 @@
     "lint": "eslint src test"
   },
   "dependencies": {
-    "@novnc/novnc": "1.5.0",
-    "@patternfly/react-core": "^5.4.0",
-    "@patternfly/react-icons": "^5.4.0",
-    "@patternfly/react-styles": "^5.4.0",
+    "@patternfly/react-core": "^6.6.0",
+    "@patternfly/react-icons": "^6.6.0",
+    "@patternfly/react-styles": "^6.6.0",
+    "guacamole-common-js": "^1.5.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },

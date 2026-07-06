@@ -8,30 +8,31 @@ import {
     HelperText,
     HelperTextItem,
     Modal,
-    ModalVariant,
+    ModalBody,
+    ModalFooter,
+    ModalHeader,
     TextInput,
 } from "@patternfly/react-core";
 
 import { useNotify } from "../notifications";
-import { setTigervncUserPassword, setX11vncPassword } from "../services/vncpassword";
+import { setGrdVncPassword } from "../services/vncpassword";
 import type { BackendId } from "../types";
 import { isCancelled, toUserMessage } from "../utils/errors";
 import { validatePassword, ValidationError } from "../utils/validation";
 
 export interface PasswordModalProps {
     backend: BackendId;
-    /** TigerVNC: the Unix user whose ~/.vnc/passwd will be written. */
-    vncUser: string;
     isOpen: boolean;
     onClose: () => void;
+    onUpdated?: () => Promise<void> | void;
 }
 
 /*
- * Sets the VNC server password. The password only lives in this component's
- * state while the modal is open; it is sent to `vncpasswd -f` on stdin and
- * cleared as soon as the request finishes. It never reaches an argv or a log.
+ * Sets GNOME Remote Desktop's VNC password. The password only lives in this
+ * component's state while the modal is open, is sent on stdin, and is cleared
+ * as soon as the request finishes. It never reaches an argv or a log.
  */
-export function PasswordModal({ backend, vncUser, isOpen, onClose }: PasswordModalProps) {
+export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordModalProps) {
     const notify = useNotify();
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -64,14 +65,14 @@ export function PasswordModal({ backend, vncUser, isOpen, onClose }: PasswordMod
         setBusy(true);
         setError(null);
         try {
-            if (backend === "tigervnc") {
-                await setTigervncUserPassword(vncUser, password);
-                notify("success", "VNC password updated", `Written to ~${vncUser}/.vnc/passwd`);
+            if (backend === "grd") {
+                await setGrdVncPassword(password);
+                notify("success", "GNOME Remote Desktop updated",
+                       "VNC password authentication is enabled; new connections will not require approval on the host desktop.");
             } else {
-                const path = await setX11vncPassword(password);
-                notify("success", "VNC password updated",
-                       `Written to ${path}. Point x11vnc at it with -rfbauth ${path}.`);
+                throw new ValidationError(`Password management is not supported for ${backend}.`);
             }
+            await onUpdated?.();
             close();
         } catch (err) {
             if (isCancelled(err))
@@ -85,62 +86,66 @@ export function PasswordModal({ backend, vncUser, isOpen, onClose }: PasswordMod
 
     return (
         <Modal
-            variant={ModalVariant.small}
-            title="Set VNC password"
+            className="ctr-password-modal"
+            width="35rem"
+            maxWidth="calc(100vw - 2rem)"
+            aria-labelledby="ctr-password-modal-title"
             isOpen={isOpen}
             onClose={busy ? undefined : close}
-            actions={[
-                <Button key="save" variant="primary" onClick={submit}
-                        isDisabled={!canSubmit} isLoading={busy}>
-                    Set password
-                </Button>,
-                <Button key="cancel" variant="link" onClick={close} isDisabled={busy}>
-                    Cancel
-                </Button>,
-            ]}
         >
-            <Form>
-                {error && <Alert variant="danger" isInline title={error} />}
-                {backend === "tigervnc" && (
-                    <Alert variant="info" isInline isPlain
-                           title={`The password will be stored (obfuscated, mode 600) as ~${vncUser || "<user>"}/.vnc/passwd.`} />
-                )}
-                <FormGroup label="New VNC password" fieldId="ctr-new-password" isRequired>
-                    <TextInput
-                        id="ctr-new-password"
-                        type="password"
-                        value={password}
-                        onChange={(_event, value) => setPassword(value)}
-                        autoComplete="new-password"
-                        aria-label="New VNC password"
-                    />
-                    {warning && (
-                        <FormHelperText>
-                            <HelperText>
-                                <HelperTextItem variant="warning">{warning}</HelperTextItem>
-                            </HelperText>
-                        </FormHelperText>
+            <ModalHeader title="Set VNC password" labelId="ctr-password-modal-title" />
+            <ModalBody>
+                <Form>
+                    {error && <Alert variant="danger" isInline title={error} />}
+                    {backend === "grd" && (
+                        <Alert variant="info" isInline isPlain
+                               title="This switches GNOME Remote Desktop VNC from desktop approval prompts to password authentication for the current Cockpit user." />
                     )}
-                </FormGroup>
-                <FormGroup label="Confirm password" fieldId="ctr-confirm-password" isRequired>
-                    <TextInput
-                        id="ctr-confirm-password"
-                        type="password"
-                        value={confirm}
-                        onChange={(_event, value) => setConfirm(value)}
-                        autoComplete="new-password"
-                        validated={mismatch ? "error" : "default"}
-                        aria-label="Confirm VNC password"
-                    />
-                    {mismatch && (
-                        <FormHelperText>
-                            <HelperText>
-                                <HelperTextItem variant="error">Passwords do not match.</HelperTextItem>
-                            </HelperText>
-                        </FormHelperText>
-                    )}
-                </FormGroup>
-            </Form>
+                    <FormGroup label="New VNC password" fieldId="ctr-new-password" isRequired>
+                        <TextInput
+                            id="ctr-new-password"
+                            type="password"
+                            value={password}
+                            onChange={(_event, value) => setPassword(value)}
+                            autoComplete="new-password"
+                            aria-label="New VNC password"
+                        />
+                        {warning && (
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem variant="warning">{warning}</HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
+                        )}
+                    </FormGroup>
+                    <FormGroup label="Confirm password" fieldId="ctr-confirm-password" isRequired>
+                        <TextInput
+                            id="ctr-confirm-password"
+                            type="password"
+                            value={confirm}
+                            onChange={(_event, value) => setConfirm(value)}
+                            autoComplete="new-password"
+                            validated={mismatch ? "error" : "default"}
+                            aria-label="Confirm VNC password"
+                        />
+                        {mismatch && (
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem variant="error">Passwords do not match.</HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
+                        )}
+                    </FormGroup>
+                </Form>
+            </ModalBody>
+            <ModalFooter>
+                <Button variant="primary" onClick={submit} isDisabled={!canSubmit} isLoading={busy}>
+                    Set password
+                </Button>
+                <Button variant="link" onClick={close} isDisabled={busy}>
+                    Cancel
+                </Button>
+            </ModalFooter>
         </Modal>
     );
 }

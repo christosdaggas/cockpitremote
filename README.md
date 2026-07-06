@@ -5,15 +5,15 @@ web-based remote desktop to the host machine**. Open Cockpit
 (`https://your-server:9090`), click **Remote Desktop** under *Tools*, and view
 or control the host's desktop right in the browser.
 
-- **Nothing to install on the client PC.** The VNC client is
-  [noVNC](https://novnc.com/), pure JavaScript running in your browser.
-- **No extra open ports.** VNC traffic is tunneled through Cockpit's own
+- **Nothing to install on the client PC.** VNC and RDP use
+  [guacamole-common-js](https://guacamole.apache.org/) with local `guacd` on
+  the host.
+- **No extra open ports.** Console traffic is tunneled through Cockpit's own
   authenticated, TLS-encrypted WebSocket (the same mechanism cockpit-machines
-  uses for VM consoles), so the VNC server on the host can stay bound to
-  `127.0.0.1`.
-- **The host needs a VNC server** (TigerVNC recommended). The plugin detects
-  what is installed, manages its systemd service, helps you set it up, sets
-  VNC passwords safely, shows health checks, and streams service logs.
+  uses for VM consoles), so host services can stay local.
+- **The host needs GNOME Remote Desktop.** The plugin focuses on GNOME Remote
+  Desktop's VNC/RDP endpoints. It manages service state, sets GNOME VNC passwords safely, shows
+  health checks, and streams service logs.
 
 ## Screenshots
 
@@ -27,9 +27,9 @@ or control the host's desktop right in the browser.
 
 | Tab | What it does |
 | --- | --- |
-| **Dashboard** | Detects TigerVNC / x11vnc / wayvnc / GNOME Remote Desktop, shows service state (active/enabled), version, health checks (transport, unit, port, session), start/stop/restart/enable/disable with confirmation dialogs, and a guided setup (copyable or one-click package install). |
-| **Remote desktop** | The noVNC console: connect/disconnect, fullscreen, Send Ctrl+Alt+Del (confirmed), view-only mode, scale-to-fit, quality/compression levels, VNC password prompt on demand. |
-| **Settings** | Backend, systemd unit, address/port, TigerVNC session user and geometry; set the VNC password (stored obfuscated with mode 600, fed to `vncpasswd` via stdin — never argv, never logged). Saved to `/etc/cockpit/cockpitremote.json`. |
+| **Dashboard** | Detects GNOME Remote Desktop VNC/RDP, shows service state (active/enabled), version, health checks (transport, unit, port, session), and start/stop/restart/enable/disable with confirmation dialogs. |
+| **Remote desktop** | Browser console for GNOME VNC and GNOME RDP through Guacamole/guacd: connect/disconnect, fullscreen, Send Ctrl+Alt+Del (confirmed), view-only mode, scale-to-fit, and authentication prompts. |
+| **Settings** | Backend, systemd unit, address/port; set the GNOME VNC password via `grdctl` stdin — never argv, never logged. Saved to `/etc/cockpit/cockpitremote.json`. |
 | **Logs** | Recent `journalctl` entries for the managed unit, with line-count and severity filters. |
 
 ## Supported distributions
@@ -41,23 +41,18 @@ Tested target platforms (Cockpit ≥ 266, i.e. any 2022+ release):
 - Debian 12+ and Ubuntu 22.04+
 - openSUSE (best effort)
 
-### Which VNC backend should I use?
+### Which backend should I use?
 
-- **TigerVNC (recommended, and the primary supported path).** Runs a separate
-  *virtual* desktop session on the host — ideal for servers and for headless
-  use, independent of whatever is on the physical screen.
 - **GNOME Remote Desktop.** Shares the physical GNOME session (Wayland or
-  Xorg). Upstream is moving to RDP-only, but many distribution builds (Fedora
-  among them) still ship the VNC backend — the plugin probes `grdctl status`
-  and, when VNC is available, connects to it and manages the per-user service
-  (`systemctl --user`). RDP-only builds are shown for information.
-- **x11vnc.** Mirrors the physical monitor, but only for Xorg sessions.
-- **wayvnc.** Only for wlroots compositors (Sway, Hyprland, …).
+  Xorg). The plugin probes `grdctl status` and connects to either GNOME VNC or
+  GNOME RDP when available. Browser sessions require local `guacd` with the
+  VNC/RDP protocol plugins installed.
 
 ## Requirements
 
 - Cockpit ≥ 266 on the host
-- A VNC server on the host (the Dashboard's setup guide installs one for you)
+- GNOME Remote Desktop with VNC or RDP enabled
+- `guacd`, `libguac-client-vnc`, and `libguac-client-rdp` on the host
 - Administrative access in Cockpit for service control, config saving and
   password management (reads work without it)
 
@@ -96,19 +91,27 @@ Remove the development symlink with:
 make devel-uninstall    # removes ~/.local/share/cockpit/cockpitremote
 ```
 
-## Quick start on Fedora / RHEL (TigerVNC)
+## Quick start on Fedora / GNOME
 
 ```sh
-sudo dnf install -y tigervnc-server
-echo ":1=YOUR_USERNAME" | sudo tee -a /etc/tigervnc/vncserver.users
+sudo dnf install -y gnome-remote-desktop guacd libguac-client-vnc libguac-client-rdp
+sudo systemctl enable --now guacd
+grdctl vnc enable
+grdctl vnc set-auth-method password
+grdctl vnc set-password
 ```
 
-Then in the plugin: **Settings → backend "TigerVNC" → Session user →
-Set VNC password…**, back on the **Dashboard** press **Start** (and
-**Enable on boot**), and connect from the **Remote desktop** tab. Display `:1`
-corresponds to port `5901` — the Settings tab pre-fills this for you.
+Then select **GNOME Remote Desktop** in the plugin, verify port `5900`, and
+connect from the **Remote desktop** tab. If your GNOME build is RDP-only, the
+Dashboard will report that the VNC endpoint is unavailable.
 
-On Debian/Ubuntu install `tigervnc-standalone-server` instead.
+For GNOME RDP:
+
+```sh
+grdctl rdp enable
+```
+
+Then select **GNOME RDP**, verify port `3389`, and connect from the **Remote desktop** tab.
 
 ## Building and developing
 
@@ -131,22 +134,21 @@ src/
 │   ├── commands.ts      the only place argv arrays are built — every input validated
 │   ├── spawn.ts         cockpit.spawn wrappers (LC_ALL=C, probe helper)
 │   ├── systemd.ts       unit status + start/stop/restart/enable/disable
-│   ├── backends.ts      VNC server detection (binaries, versions, units)
-│   ├── channel.ts       builds the Cockpit channel WebSocket URL for noVNC
-│   ├── vncpassword.ts   vncpasswd-via-stdin password flow
+│   ├── backends.ts      remote desktop backend detection (binaries, versions, units)
+│   ├── channel.ts       builds Cockpit stream WebSocket URLs
+│   ├── guacdTunnel.ts   raw guacd handshake/tunnel for browser VNC/RDP
+│   ├── vncpassword.ts   grdctl password flow
 │   ├── config.ts        /etc/cockpit/cockpitremote.json + localStorage prefs
-│   ├── journal.ts, network.ts, session.ts, osinfo.ts, packages.ts
-├── hooks/               useRfb (console state machine), useBackends, useConfig
-├── components/          PatternFly 5 UI (tabs, cards, modals, console)
+│   ├── journal.ts, network.ts, session.ts
+├── hooks/               useGuacd console state, useBackends, useConfig
+├── components/          PatternFly 6 UI (tabs, cards, modals, console)
 └── utils/               pure validation / parsing / error mapping / health logic
 test/                    vitest suites incl. a shell-injection corpus
 ```
 
-The remote desktop transport: noVNC's `RFB` is pointed at
-`wss://<host>/cockpit/channel/<csrf-token>?<base64 JSON>` where the JSON
-describes a raw `stream` channel to `127.0.0.1:<port>`. Cockpit's bridge opens
-that TCP connection on the host, so the browser never talks to the VNC server
-directly and the Cockpit session's authentication and encryption apply.
+The browser transport uses Cockpit's stream channel to reach local `guacd` on
+port `4822`. The browser-side Guacamole client performs the `guacd` handshake;
+`guacd` then connects to GNOME Remote Desktop at the configured VNC/RDP address/port.
 
 ## Security notes
 
@@ -156,17 +158,17 @@ directly and the Cockpit session's authentication and encryption apply.
   input is rejected, never "sanitized". A regression test suite feeds an
   injection corpus (`; rm -rf /`, `$(reboot)`, option injection, …) to every
   builder.
-- **Passwords** are fed to `vncpasswd -f` on stdin, written obfuscated with
-  mode 600 (root- or session-user-owned), never placed in argv, state, logs or
-  the config file.
+- **Passwords** for GNOME VNC are fed to `grdctl` on stdin, never placed in
+  argv, logs or the config file. RDP credentials are prompted per connection and
+  are not persisted.
 - **Privileges**: reads use `superuser: "try"`; mutations (service control,
-  config save, password files, package install) use `superuser: "require"`,
+  config save, password files) use `superuser: "require"`,
   which triggers Cockpit's standard privilege escalation. Without admin
   access the UI degrades gracefully and tells you what's missing.
 - **Network exposure**: none added. The plugin recommends and health-checks
   that the VNC server listens on loopback only; a warning appears if it is
   reachable from the network.
-- Destructive actions (stop/restart service, Ctrl+Alt+Del, package install)
+- Destructive actions (stop/restart service, Ctrl+Alt+Del)
   require an explicit confirmation dialog.
 
 ## Troubleshooting
@@ -174,11 +176,11 @@ directly and the Cockpit session's authentication and encryption apply.
 | Symptom | Fix |
 | --- | --- |
 | Plugin missing from the Cockpit menu | Re-log into Cockpit; check the symlink/`/usr/local/share/cockpit/cockpitremote` exists and contains `manifest.json`. |
-| "Could not reach the VNC server at 127.0.0.1:5901" | Dashboard → is the service active? Health says whether the port is listening. TigerVNC: check `/etc/tigervnc/vncserver.users` maps `:1` to a real user and the user has a VNC password. |
+| "Could not reach the VNC server at 127.0.0.1:5900" | Dashboard → is GNOME Remote Desktop active and is VNC enabled in `grdctl status`? Health says whether the port is listening. |
+| "guacd is not listening on port 4822" | Install `guacd`, `libguac-client-vnc`, `libguac-client-rdp`, and start `guacd.service`; the browser console needs this local gateway. |
 | "Permission denied" alerts | Click your user menu in Cockpit and turn on *Administrative access*. |
 | Authentication fails in the console | Reset the password via Settings → *Set VNC password…* (remember classic VNC uses only the first 8 characters). |
-| Black screen after connecting | The virtual session may still be starting; wait a few seconds or check Logs. |
-| TigerVNC unit fails immediately | `journalctl -u vncserver@:1` (or the Logs tab). A common cause is a missing `~/.vnc/passwd` for the mapped user. |
+| Black screen after connecting | Verify the GNOME session is unlocked and the remote desktop service belongs to the same user you use in Cockpit. |
 
 ## Manual testing checklist
 
@@ -188,11 +190,11 @@ directly and the Cockpit session's authentication and encryption apply.
 - [ ] Start / Stop / Restart / Enable / Disable work and show toasts
 - [ ] Stop/Restart ask for confirmation first
 - [ ] Without admin access, mutations show a clear permission message
-- [ ] Setup guide shows the right package manager commands for the distro
 - [ ] Settings rejects an invalid unit name / port / geometry / username
 - [ ] Settings save persists to `/etc/cockpit/cockpitremote.json`
-- [ ] Set VNC password works; `~user/.vnc/passwd` is mode 600
-- [ ] Remote desktop connects to a running TigerVNC on 127.0.0.1
+- [ ] Set VNC password works through GNOME Remote Desktop
+- [ ] Remote desktop connects to GNOME Remote Desktop on 127.0.0.1:5900 when VNC is available
+- [ ] Remote desktop connects to GNOME RDP on 127.0.0.1:3389 when RDP and guacd are available
 - [ ] Password prompt appears when the server requires auth; wrong password shows a clear error and Retry works
 - [ ] View-only blocks input; scale/quality/compression apply live
 - [ ] Fullscreen enter/exit works; Ctrl+Alt+Del asks for confirmation
@@ -203,19 +205,14 @@ directly and the Cockpit session's authentication and encryption apply.
 
 ## Known limitations
 
-- The physical **GNOME Wayland** session cannot be mirrored (upstream
-  limitation: no VNC server supports Mutter; GNOME Remote Desktop is
-  RDP-only). A TigerVNC *virtual* desktop is the supported alternative.
-- wayvnc password/TLS configuration is not managed by the plugin (v1).
+- Browser console support depends on local `guacd` with VNC/RDP protocol plugins installed.
 - Managing user-scoped systemd units (`systemctl --user`) is not supported.
 - No automated end-to-end console tests; covered by the manual checklist.
 - English only (no i18n yet).
 
 ## Future improvements
 
-- RDP backend via gnome-remote-desktop for live GNOME session sharing
 - Clipboard sharing UI in the console toolbar
-- Editing `/etc/tigervnc/vncserver.users` and `~/.vnc/config` from Settings
 - PatternFly 6 migration to match the newest Cockpit shell styling
 - RPM/DEB packaging in CI (see `packaging-notes.md`)
 - i18n via cockpit's gettext support

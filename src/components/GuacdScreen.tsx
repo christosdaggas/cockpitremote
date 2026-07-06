@@ -5,38 +5,35 @@ import {
     EmptyStateActions,
     EmptyStateBody,
     EmptyStateFooter,
-    EmptyStateHeader,
-    EmptyStateIcon,
     Spinner,
 } from "@patternfly/react-core";
 import { DesktopIcon, ExclamationCircleIcon, PluggedIcon } from "@patternfly/react-icons";
 
-import type { ConsoleState } from "../hooks/useRfb";
+import type { ConsoleState } from "../hooks/consoleState";
 
-export interface VncScreenProps {
+export interface GuacdScreenProps {
+    screenRef: RefObject<HTMLDivElement>;
     containerRef: RefObject<HTMLDivElement>;
     state: ConsoleState;
     target: string;
+    protocol?: "rdp" | "vnc";
     onConnect: () => void;
 }
 
-/*
- * The container div must stay mounted in every state — noVNC attaches its
- * canvas to it — so all state feedback is drawn on an overlay above it.
- */
-export function VncScreen({ containerRef, state, target, onConnect }: VncScreenProps) {
+export function GuacdScreen({ screenRef, containerRef, state, target, protocol = "rdp", onConnect }: GuacdScreenProps) {
+    const label = protocol === "vnc" ? "GNOME VNC" : "GNOME RDP";
+    const endpoint = protocol.toUpperCase();
+
     return (
-        <div className="ctr-console">
+        <div ref={screenRef} className="ctr-console">
             <div ref={containerRef} className="ctr-console-canvas" />
             {state.kind !== "connected" && (
                 <div className="ctr-console-overlay">
                     {state.kind === "idle" && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="Remote desktop" headingLevel="h2"
-                                              icon={<EmptyStateIcon icon={DesktopIcon} />} />
+                        <EmptyState titleText={label} headingLevel="h2" icon={DesktopIcon}>
                             <EmptyStateBody>
-                                Connect to the host&apos;s desktop at {target}. The connection is tunneled
-                                through Cockpit — no extra ports, nothing to install locally.
+                                Connect to the host&apos;s {endpoint} endpoint at {target}. The browser talks to
+                                local guacd through Cockpit, then guacd connects to GNOME Remote Desktop.
                             </EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>
@@ -45,17 +42,18 @@ export function VncScreen({ containerRef, state, target, onConnect }: VncScreenP
                             </EmptyStateFooter>
                         </EmptyState>
                     )}
-                    {(state.kind === "connecting" || state.kind === "credentials") && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText={state.kind === "credentials" ? "Waiting for credentials" : `Connecting to ${target}…`}
-                                              headingLevel="h2"
-                                              icon={<EmptyStateIcon icon={Spinner} />} />
+                    {state.kind === "credentials" && (
+                        <EmptyState titleText={`${endpoint} credentials required`} headingLevel="h2" icon={DesktopIcon}>
+                            <EmptyStateBody>
+                                Enter the GNOME Remote Desktop {endpoint} credentials to continue.
+                            </EmptyStateBody>
                         </EmptyState>
                     )}
+                    {state.kind === "connecting" && (
+                        <EmptyState titleText={`Connecting to ${target}…`} headingLevel="h2" icon={Spinner} />
+                    )}
                     {state.kind === "error" && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="Connection failed" headingLevel="h2"
-                                              icon={<EmptyStateIcon icon={ExclamationCircleIcon} />} />
+                        <EmptyState titleText="Connection failed" headingLevel="h2" icon={ExclamationCircleIcon}>
                             <EmptyStateBody>{state.message}</EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>
@@ -65,13 +63,11 @@ export function VncScreen({ containerRef, state, target, onConnect }: VncScreenP
                         </EmptyState>
                     )}
                     {state.kind === "disconnected" && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="Disconnected" headingLevel="h2"
-                                              icon={<EmptyStateIcon icon={PluggedIcon} />} />
+                        <EmptyState titleText="Disconnected" headingLevel="h2" icon={PluggedIcon}>
                             <EmptyStateBody>
                                 {state.clean
                                     ? "The session was closed."
-                                    : "The connection to the VNC server was lost."}
+                                    : `The connection to the ${endpoint} server was lost.`}
                             </EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>

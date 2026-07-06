@@ -3,9 +3,11 @@ import {
     Alert,
     AlertActionCloseButton,
     AlertGroup,
-    Tab,
-    TabTitleText,
-    Tabs,
+    Nav,
+    NavItem,
+    NavList,
+    Page,
+    PageSection,
 } from "@patternfly/react-core";
 
 import { backendDef } from "./constants";
@@ -27,11 +29,20 @@ interface Toast {
 
 let toastCounter = 0;
 
+const NAV_ITEMS = [
+    { id: "dashboard", label: "Dashboard", description: "Backend detection, service state, and connection health." },
+    { id: "console", label: "Remote desktop", description: "Connect to the host desktop through Cockpit's authenticated session." },
+    { id: "settings", label: "Settings", description: "Configure the remote desktop backend, target address, service unit, and passwords." },
+    { id: "logs", label: "Logs", description: "Inspect recent journal entries for the configured remote desktop service." },
+] as const;
+
+type TabId = typeof NAV_ITEMS[number]["id"];
+
 export function App() {
     const { config, warning: configWarning, loading: configLoading, save } = useConfig();
     const [prefs, updatePrefs] = usePrefs();
     const backendsData = useBackends();
-    const [activeTab, setActiveTab] = useState<string | number>("dashboard");
+    const [activeTab, setActiveTab] = useState<TabId>("dashboard");
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const notify = useCallback<NotifyFn>((variant, title, detail) => {
@@ -54,25 +65,38 @@ export function App() {
     }, [config.unit, config.backend, backendsData.backends]);
 
     const activeScope = config.backend ? backendDef(config.backend).unitScope : "system";
+    const activeItem = NAV_ITEMS.find(item => item.id === activeTab) ?? NAV_ITEMS[0];
 
     if (configLoading)
         return <Loading text="Loading configuration…" />;
 
     return (
         <NotifyContext.Provider value={notify}>
-            <div className="ctr-page">
-                <header className="ctr-page-header">
-                    <Tabs activeKey={activeTab} onSelect={(_event, key) => setActiveTab(key)}
-                          className="ctr-page-tabs" aria-label="Remote desktop sections">
-                        <Tab eventKey="dashboard" title={<TabTitleText>Dashboard</TabTitleText>} />
-                        <Tab eventKey="console" title={<TabTitleText>Remote desktop</TabTitleText>} />
-                        <Tab eventKey="settings" title={<TabTitleText>Settings</TabTitleText>} />
-                        <Tab eventKey="logs" title={<TabTitleText>Logs</TabTitleText>} />
-                    </Tabs>
-                </header>
-                <main className="ctr-page-main">
+            <Page sidebar={null} className="ctr-page">
+                <PageSection className="ctr-header" hasBodyWrapper={false}>
+                    <Nav variant="horizontal-subnav" aria-label="Local">
+                        <NavList>
+                            {NAV_ITEMS.map(item => (
+                                <NavItem
+                                    key={item.id}
+                                    itemId={item.id}
+                                    isActive={activeTab === item.id}
+                                    preventDefault
+                                    onClick={(_event, itemId) => setActiveTab(itemId as TabId)}
+                                >
+                                    {item.label}
+                                </NavItem>
+                            ))}
+                        </NavList>
+                    </Nav>
+                </PageSection>
+                <PageSection className="ctr-page-main" hasBodyWrapper={false}>
+                    <div className="ctr-page-heading">
+                        <h1>{activeItem.label}</h1>
+                        <p>{activeItem.description}</p>
+                    </div>
                     {configWarning && (
-                        <Alert variant="warning" isInline title={configWarning} className="pf-v5-u-mb-md" />
+                        <Alert variant="warning" isInline title={configWarning} className="ctr-page-alert" />
                     )}
                     <div hidden={activeTab !== "dashboard"}>
                         <DashboardTab data={backendsData} config={config}
@@ -84,14 +108,15 @@ export function App() {
                                           onGoToDashboard={() => setActiveTab("dashboard")} />
                     </div>
                     <div hidden={activeTab !== "settings"}>
-                        <SettingsTab config={config} save={save} backends={backendsData.backends} />
+                        <SettingsTab config={config} save={save} onRefresh={backendsData.refresh}
+                                     backends={backendsData.backends} />
                     </div>
                     <div hidden={activeTab !== "logs"}>
                         <LogsTab unit={activeUnit} scope={activeScope} prefs={prefs}
                                  updatePrefs={updatePrefs} isActive={activeTab === "logs"} />
                     </div>
-                </main>
-            </div>
+                </PageSection>
+            </Page>
             <AlertGroup isToast isLiveRegion>
                 {toasts.map(toast => (
                     <Alert

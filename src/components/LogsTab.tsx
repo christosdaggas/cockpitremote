@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import {
     Alert,
     Button,
+    Card,
+    CardBody,
+    CardTitle,
     EmptyState,
     EmptyStateBody,
-    EmptyStateHeader,
-    EmptyStateIcon,
     FormSelect,
     FormSelectOption,
     Toolbar,
@@ -55,67 +56,66 @@ export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabPr
 
     if (!unit) {
         return (
-            <EmptyState>
-                <EmptyStateHeader titleText="No unit configured" headingLevel="h2"
-                                  icon={<EmptyStateIcon icon={ListIcon} />} />
+            <EmptyState titleText="No unit configured" headingLevel="h2" icon={ListIcon}>
                 <EmptyStateBody>
-                    Select a VNC backend on the Dashboard or in Settings to see its service logs here.
+                    Select a remote desktop backend on the Dashboard or in Settings to see its service logs here.
                 </EmptyStateBody>
             </EmptyState>
         );
     }
 
     return (
-        <div className="ctr-logs-panel">
-            <Toolbar inset={{ default: "insetNone" }} className="ctr-logs-toolbar">
-                <ToolbarContent>
-                    <ToolbarItem>
-                        <Button variant="secondary" icon={<SyncAltIcon />} onClick={refresh}
-                                isLoading={loading} isDisabled={loading}>
-                            Refresh
-                        </Button>
-                    </ToolbarItem>
-                    <ToolbarItem>
-                        <FormSelect value={String(prefs.logLines)} aria-label="Number of log lines"
-                                    onChange={(_event, value) => updatePrefs({ logLines: Number(value) })}>
-                            {LOG_LINE_CHOICES.map(n => (
-                                <FormSelectOption key={n} value={String(n)} label={`Last ${n} lines`} />
-                            ))}
-                        </FormSelect>
-                    </ToolbarItem>
-                    <ToolbarItem>
-                        <FormSelect value={prefs.logPriority === null ? "all" : String(prefs.logPriority)}
-                                    aria-label="Log severity filter"
-                                    onChange={(_event, value) =>
-                                        updatePrefs({ logPriority: value === "all" ? null : Number(value) })}>
-                            {LOG_PRIORITIES.map(p => (
-                                <FormSelectOption key={p.label}
-                                                  value={p.value === null ? "all" : String(p.value)}
-                                                  label={p.label} />
-                            ))}
-                        </FormSelect>
-                    </ToolbarItem>
-                    <ToolbarItem alignSelf="center">
-                        <span className="pf-v5-u-color-200">{unit}</span>
-                    </ToolbarItem>
-                </ToolbarContent>
-            </Toolbar>
-            {error && <Alert variant="danger" isInline title={error} className="pf-v5-u-mb-md" />}
-            {loading && logs === null
-                ? <Loading text="Reading the journal…" />
-                : logs !== null && (
-                    logs.trim() === ""
-                        ? (
-                            <EmptyState>
-                                <EmptyStateHeader titleText="No log entries" headingLevel="h2"
-                                                  icon={<EmptyStateIcon icon={ListIcon} />} />
-                                <EmptyStateBody>
-                                    The journal has no entries for {unit} matching the current filter.
-                                </EmptyStateBody>
-                            </EmptyState>
-                        )
-                        : <pre className="ctr-logs">{logs}</pre>
-                )}
-        </div>
+        <Card className="ctr-logs-card">
+            <CardTitle>Service journal</CardTitle>
+            <CardBody>
+                <Toolbar inset={{ default: "insetNone" }} className="ctr-logs-toolbar">
+                    <ToolbarContent>
+                        <ToolbarItem>
+                            <Button variant="secondary" icon={<SyncAltIcon />} onClick={refresh}
+                                    isLoading={loading} isDisabled={loading}>
+                                Refresh
+                            </Button>
+                        </ToolbarItem>
+                        <ToolbarItem>
+                            <FormSelect value={String(prefs.logLines)} aria-label="Number of log lines"
+                                        onChange={(_event, value) => updatePrefs({ logLines: Number(value) })}>
+                                {LOG_LINE_CHOICES.map(n => (
+                                    <FormSelectOption key={n} value={String(n)} label={`Last ${n} lines`} />
+                                ))}
+                            </FormSelect>
+                        </ToolbarItem>
+                        <ToolbarItem>
+                            <FormSelect value={prefs.logPriority === null ? "all" : String(prefs.logPriority)}
+                                        aria-label="Log severity filter"
+                                        onChange={(_event, value) =>
+                                            updatePrefs({ logPriority: value === "all" ? null : Number(value) })}>
+                                {LOG_PRIORITIES.map(p => (
+                                    <FormSelectOption key={p.label}
+                                                      value={p.value === null ? "all" : String(p.value)}
+                                                      label={p.label} />
+                                ))}
+                            </FormSelect>
+                        </ToolbarItem>
+                        <ToolbarItem alignSelf="center">
+                            <span>{unit}</span>
+                        </ToolbarItem>
+                    </ToolbarContent>
+                </Toolbar>
+                {error && <Alert variant="danger" isInline title={error} className="pf-v6-u-mb-md" />}
+                {loading && logs === null
+                    ? <Loading text="Reading the journal…" />
+                    : logs !== null && (
+                        logs.trim() === ""
+                            ? (
+                                <EmptyState titleText="No log entries" headingLevel="h2" icon={ListIcon}>
+                                    <EmptyStateBody>
+                                        The journal has no entries for {unit} matching the current filter.
+                                    </EmptyStateBody>
+                                </EmptyState>
+                            )
+                            : <pre className="ctr-logs">{logs}</pre>
+                    )}
+            </CardBody>
+        </Card>
     );
 }

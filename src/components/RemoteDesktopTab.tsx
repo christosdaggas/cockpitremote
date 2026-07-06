@@ -2,23 +2,24 @@ import { useCallback, useRef } from "react";
 import {
     Alert,
     Button,
+    Card,
+    CardBody,
+    CardTitle,
     EmptyState,
     EmptyStateActions,
     EmptyStateBody,
     EmptyStateFooter,
-    EmptyStateHeader,
-    EmptyStateIcon,
     Stack,
     StackItem,
 } from "@patternfly/react-core";
 import { CogIcon } from "@patternfly/react-icons";
 
 import { backendDef } from "../constants";
-import { useRfb } from "../hooks/useRfb";
+import { useGuacd } from "../hooks/useGuacd";
 import type { BackendInfo, RemoteConfig, UiPrefs } from "../types";
 import { ConsoleToolbar } from "./ConsoleToolbar";
-import { CredentialsModal } from "./CredentialsModal";
-import { VncScreen } from "./VncScreen";
+import { GuacdCredentialsModal } from "./GuacdCredentialsModal";
+import { GuacdScreen } from "./GuacdScreen";
 
 export interface RemoteDesktopTabProps {
     config: RemoteConfig;
@@ -30,26 +31,11 @@ export interface RemoteDesktopTabProps {
 }
 
 export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToDashboard }: RemoteDesktopTabProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const rfb = useRfb(containerRef, prefs);
-
-    const connect = useCallback(() => {
-        rfb.connect(config.port, config.address);
-    }, [rfb, config.port, config.address]);
-
-    const fullscreen = useCallback(() => {
-        containerRef.current?.requestFullscreen?.().catch(() => {
-            // Fullscreen denied by the browser — nothing to clean up.
-        });
-    }, []);
-
     if (!config.backend) {
         return (
-            <EmptyState>
-                <EmptyStateHeader titleText="No VNC backend selected" headingLevel="h2"
-                                  icon={<EmptyStateIcon icon={CogIcon} />} />
+            <EmptyState titleText="No remote desktop backend selected" headingLevel="h2" icon={CogIcon}>
                 <EmptyStateBody>
-                    Pick a VNC backend on the Dashboard (or configure one in Settings) before
+                    Pick a backend on the Dashboard (or configure one in Settings) before
                     connecting to the host&apos;s desktop.
                 </EmptyStateBody>
                 <EmptyStateFooter>
@@ -64,10 +50,6 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
     const def = backendDef(config.backend);
     const target = `${config.address}:${config.port}`;
 
-    // Static gate for backend kinds this plugin cannot drive, plus the
-    // runtime gate for hosts where detection ruled the backend out (e.g. an
-    // RDP-only GNOME Remote Desktop build). Unknown (null) detection does
-    // not block — connecting is harmless and the Dashboard explains state.
     const info = backends?.find(b => b.id === config.backend);
     if (!def.manageable || info?.supported === false) {
         return (
@@ -77,29 +59,67 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
         );
     }
 
+    return <GuacdConsole config={config} prefs={prefs} updatePrefs={updatePrefs} target={target}
+                         protocol={def.protocol} />;
+}
+
+function GuacdConsole({
+    config,
+    prefs,
+    updatePrefs,
+    target,
+    protocol,
+}: {
+    config: RemoteConfig;
+    prefs: UiPrefs;
+    updatePrefs: (patch: Partial<UiPrefs>) => void;
+    target: string;
+    protocol: "rdp" | "vnc";
+}) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const screenRef = useRef<HTMLDivElement>(null);
+    const guacd = useGuacd(containerRef, prefs, protocol);
+
+    const connect = useCallback(() => {
+        guacd.connect(config.port, config.address);
+    }, [guacd, config.port, config.address]);
+
+    const fullscreen = useCallback(() => {
+        screenRef.current?.requestFullscreen?.().catch(() => {
+            // Fullscreen denied by the browser — nothing to clean up.
+        });
+    }, []);
+
     return (
-        <Stack hasGutter className="ctr-console-panel">
-            <StackItem>
-                <ConsoleToolbar
-                    state={rfb.state}
-                    prefs={prefs}
-                    updatePrefs={updatePrefs}
-                    onConnect={connect}
-                    onDisconnect={rfb.disconnect}
-                    onCtrlAltDel={rfb.sendCtrlAltDel}
-                    onFullscreen={fullscreen}
+        <Card className="ctr-console-card">
+            <CardTitle>Console</CardTitle>
+            <CardBody>
+                <Stack hasGutter>
+                    <StackItem>
+                        <ConsoleToolbar
+                            state={guacd.state}
+                            prefs={prefs}
+                            updatePrefs={updatePrefs}
+                            onConnect={connect}
+                            onDisconnect={guacd.disconnect}
+                            onCtrlAltDel={guacd.sendCtrlAltDel}
+                            onFullscreen={fullscreen}
+                            showEncodingPrefs={false}
+                        />
+                    </StackItem>
+                    <StackItem>
+                        <GuacdScreen screenRef={screenRef} containerRef={containerRef} state={guacd.state} target={target}
+                                      protocol={protocol}
+                                      onConnect={connect} />
+                    </StackItem>
+                </Stack>
+                <GuacdCredentialsModal
+                    protocol={protocol}
+                    isOpen={guacd.state.kind === "credentials"}
+                    onSubmit={guacd.sendCredentials}
+                    onCancel={guacd.disconnect}
                 />
-            </StackItem>
-            <StackItem>
-                <VncScreen containerRef={containerRef} state={rfb.state} target={target}
-                           onConnect={connect} />
-            </StackItem>
-            <CredentialsModal
-                isOpen={rfb.state.kind === "credentials"}
-                message={rfb.state.kind === "credentials" ? rfb.state.message : null}
-                onSubmit={rfb.sendCredentials}
-                onCancel={rfb.disconnect}
-            />
-        </Stack>
+            </CardBody>
+        </Card>
     );
 }

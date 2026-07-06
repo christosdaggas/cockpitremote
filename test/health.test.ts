@@ -4,14 +4,15 @@ import { DEFAULT_CONFIG } from "../src/services/config";
 import type { BackendInfo, RemoteConfig } from "../src/types";
 import { computeHealthChecks } from "../src/utils/health";
 
-function tigervncBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
+function grdBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
     return {
-        id: "tigervnc",
-        label: "TigerVNC (virtual desktop session)",
-        binaryPath: "/usr/bin/Xvnc",
-        version: "1.13.1",
-        detectedUnit: "vncserver@:1.service",
-        unitScope: "system",
+        id: "grd",
+        label: "GNOME VNC",
+        protocol: "vnc",
+        binaryPath: "/usr/bin/grdctl",
+        version: "50.1",
+        detectedUnit: "gnome-remote-desktop.service",
+        unitScope: "user",
         status: {
             exists: true,
             loadState: "loaded",
@@ -22,17 +23,17 @@ function tigervncBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
         },
         supported: true,
         notes: [],
-        defaultPort: 5901,
-        detectedPort: null,
+        defaultPort: 5900,
+        detectedPort: 5900,
         ...overrides,
     };
 }
 
 const config: RemoteConfig = {
     ...DEFAULT_CONFIG,
-    backend: "tigervnc",
-    unit: "vncserver@:1.service",
-    port: 5901,
+    backend: "grd",
+    unit: "gnome-remote-desktop.service",
+    port: 5900,
 };
 
 describe("computeHealthChecks", () => {
@@ -40,10 +41,11 @@ describe("computeHealthChecks", () => {
         const checks = computeHealthChecks({
             transportAvailable: true,
             config,
-            activeUnit: "vncserver@:1.service",
-            backends: [tigervncBackend()],
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend()],
             session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
-            sockets: [{ address: "127.0.0.1", port: 5901 }],
+            sockets: [{ address: "127.0.0.1", port: 5900 }, { address: "::1", port: 4822 }],
+            loginUser: "alice",
         });
         expect(checks.every(c => c.state === "ok")).toBe(true);
     });
@@ -52,8 +54,8 @@ describe("computeHealthChecks", () => {
         const checks = computeHealthChecks({
             transportAvailable: false,
             config,
-            activeUnit: "vncserver@:1.service",
-            backends: [tigervncBackend()],
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend()],
             session: null,
             sockets: [],
         });
@@ -65,7 +67,7 @@ describe("computeHealthChecks", () => {
             transportAvailable: true,
             config: DEFAULT_CONFIG,
             activeUnit: "",
-            backends: [tigervncBackend()],
+            backends: [grdBackend()],
             session: null,
             sockets: [],
         });
@@ -76,8 +78,8 @@ describe("computeHealthChecks", () => {
         const checks = computeHealthChecks({
             transportAvailable: true,
             config,
-            activeUnit: "vncserver@:1.service",
-            backends: [tigervncBackend()],
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend()],
             session: null,
             sockets: [],
         });
@@ -88,18 +90,88 @@ describe("computeHealthChecks", () => {
         const checks = computeHealthChecks({
             transportAvailable: true,
             config,
-            activeUnit: "vncserver@:1.service",
-            backends: [tigervncBackend()],
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend()],
             session: null,
-            sockets: [{ address: "0.0.0.0", port: 5901 }],
+            sockets: [{ address: "0.0.0.0", port: 5900 }],
         });
         const port = checks.find(c => c.id === "port");
         expect(port?.state).toBe("warning");
-        expect(port?.detail).toMatch(/127\.0\.0\.1/);
+        expect(port?.detail).toMatch(/firewall/);
+    });
+
+    it("labels and explains an exposed RDP port", () => {
+        const rdpConfig: RemoteConfig = {
+            ...DEFAULT_CONFIG,
+            backend: "grd-rdp",
+            unit: "gnome-remote-desktop.service",
+            port: 3389,
+        };
+        const checks = computeHealthChecks({
+            transportAvailable: true,
+            config: rdpConfig,
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend({ id: "grd-rdp", label: "GNOME RDP", protocol: "rdp", defaultPort: 3389, detectedPort: 3389 })],
+            session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
+            sockets: [{ address: "*", port: 3389 }],
+            loginUser: "alice",
+        });
+        const port = checks.find(c => c.id === "port");
+        expect(port?.label).toBe("RDP port 3389");
+        expect(port?.detail).toMatch(/RDP clients/);
+    });
+
+    it("reports the guacd gateway for GNOME backends", () => {
+        const rdpConfig: RemoteConfig = {
+            ...DEFAULT_CONFIG,
+            backend: "grd-rdp",
+            unit: "gnome-remote-desktop.service",
+            port: 3389,
+        };
+        const backend = grdBackend({
+            id: "grd-rdp",
+            label: "GNOME RDP",
+            protocol: "rdp",
+            defaultPort: 3389,
+            detectedPort: 3389,
+        });
+
+        const missing = computeHealthChecks({
+            transportAvailable: true,
+            config: rdpConfig,
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [backend],
+            session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
+            sockets: [{ address: "127.0.0.1", port: 3389 }],
+            loginUser: "alice",
+        });
+        expect(missing.find(c => c.id === "guacd")?.state).toBe("error");
+
+        const present = computeHealthChecks({
+            transportAvailable: true,
+            config: rdpConfig,
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [backend],
+            session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
+            sockets: [{ address: "127.0.0.1", port: 3389 }, { address: "::1", port: 4822 }],
+            loginUser: "alice",
+        });
+        expect(present.find(c => c.id === "guacd")?.state).toBe("ok");
+
+        const vnc = computeHealthChecks({
+            transportAvailable: true,
+            config,
+            activeUnit: "gnome-remote-desktop.service",
+            backends: [grdBackend()],
+            session: { type: "wayland", desktop: "GNOME", display: null, user: "alice" },
+            sockets: [{ address: "127.0.0.1", port: 5900 }, { address: "::1", port: 4822 }],
+            loginUser: "alice",
+        });
+        expect(vnc.find(c => c.id === "guacd")?.state).toBe("ok");
     });
 
     it("errors when the configured unit does not exist", () => {
-        const backend = tigervncBackend({
+        const backend = grdBackend({
             status: {
                 exists: false,
                 loadState: "not-found",
@@ -112,7 +184,7 @@ describe("computeHealthChecks", () => {
         const checks = computeHealthChecks({
             transportAvailable: true,
             config,
-            activeUnit: "vncserver@:1.service",
+            activeUnit: "gnome-remote-desktop.service",
             backends: [backend],
             session: null,
             sockets: [],
@@ -121,13 +193,6 @@ describe("computeHealthChecks", () => {
     });
 
     it("warns when the desktop session belongs to a different user than the Cockpit login (grd)", () => {
-        const grdBackend = tigervncBackend({
-            id: "grd",
-            label: "GNOME Remote Desktop",
-            binaryPath: "/usr/bin/grdctl",
-            detectedUnit: "gnome-remote-desktop.service",
-            unitScope: "user",
-        });
         const grdConfig: RemoteConfig = {
             ...DEFAULT_CONFIG,
             backend: "grd",
@@ -138,7 +203,7 @@ describe("computeHealthChecks", () => {
             transportAvailable: true,
             config: grdConfig,
             activeUnit: "gnome-remote-desktop.service",
-            backends: [grdBackend],
+            backends: [grdBackend()],
             sockets: [{ address: "*", port: 5900 }],
         };
 

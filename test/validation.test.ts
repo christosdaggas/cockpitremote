@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     ValidationError,
-    displayFromUnit,
     isLoopback,
-    portForDisplay,
     portWarning,
     validateAddress,
     validateGeometry,
@@ -36,9 +34,7 @@ const INJECTION_CORPUS = [
 
 describe("validateUnitName", () => {
     it.each([
-        "vncserver@:1.service",
-        "x11vnc.service",
-        "wayvnc.service",
+        "example.service",
         "gnome-remote-desktop.service",
         "my_custom-unit.2.service",
     ])("accepts %s", unit => {
@@ -62,7 +58,7 @@ describe("validateUnitName", () => {
 describe("validatePort", () => {
     it("accepts the full TCP range", () => {
         expect(validatePort(1)).toBe(1);
-        expect(validatePort(5901)).toBe(5901);
+        expect(validatePort(5900)).toBe(5900);
         expect(validatePort(65535)).toBe(65535);
     });
 
@@ -71,7 +67,7 @@ describe("validatePort", () => {
     });
 
     it("advises on unconventional ports without blocking them", () => {
-        expect(portWarning(5901)).toBeNull();
+        expect(portWarning(5900)).toBeNull();
         expect(portWarning(8080)).toMatch(/5900-5999/);
     });
 });
@@ -118,7 +114,7 @@ describe("validateUsername", () => {
 
 describe("validatePath", () => {
     it("accepts safe absolute paths", () => {
-        expect(validatePath("/etc/cockpitremote/x11vnc.passwd")).toBe("/etc/cockpitremote/x11vnc.passwd");
+        expect(validatePath("/etc/cockpitremote/grd.passwd")).toBe("/etc/cockpitremote/grd.passwd");
         expect(validatePath("/home/alice/.vnc")).toBe("/home/alice/.vnc");
     });
 
@@ -141,17 +137,5 @@ describe("validatePassword", () => {
         expect(() => validatePassword("")).toThrow(ValidationError);
         expect(() => validatePassword("x".repeat(65))).toThrow(ValidationError);
         expect(() => validatePassword("pass\nword")).toThrow(ValidationError);
-    });
-});
-
-describe("display/port helpers", () => {
-    it("derives the display number from TigerVNC unit names", () => {
-        expect(displayFromUnit("vncserver@:1.service")).toBe(1);
-        expect(displayFromUnit("vncserver@:12.service")).toBe(12);
-        expect(displayFromUnit("x11vnc.service")).toBeNull();
-    });
-
-    it("maps displays to conventional ports", () => {
-        expect(portForDisplay(1)).toBe(5901);
     });
 });

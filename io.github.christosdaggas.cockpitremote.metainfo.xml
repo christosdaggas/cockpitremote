@@ -12,13 +12,13 @@
   <bundle type="package">cockpit-cockpitremote</bundle>
   <description>
     <p>
-      A fully web-based remote desktop for the host machine: noVNC running in
-      the browser, tunneled through Cockpit's authenticated, TLS-encrypted
-      WebSocket. Nothing to install on the client, no extra open ports.
+      A fully web-based remote desktop for the host machine: Guacamole/guacd for
+      GNOME VNC and GNOME RDP, tunneled through Cockpit's authenticated,
+      TLS-encrypted WebSocket. Nothing to install on the client, no extra open ports.
     </p>
     <p>
-      Detects TigerVNC, x11vnc, wayvnc and GNOME Remote Desktop, manages the
-      VNC service, guides setup, sets VNC passwords safely, and shows health
+      Detects GNOME Remote Desktop VNC and GNOME Remote Desktop RDP, manages the
+      remote desktop service, guides setup, sets GNOME VNC passwords safely, and shows health
       checks and service logs.
     </p>
   </description>

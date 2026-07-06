@@ -1,4 +1,6 @@
 node_modules/
 dist/
+.playwright-mcp/
+public/rpmbuild/
 *.log
 .DS_Store

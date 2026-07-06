@@ -10,7 +10,7 @@ function setDarkMode(style?: string) {
     const preference = style ?? localStorage.getItem("shell:style") ?? "auto";
     const dark = preference === "dark" ||
         (preference === "auto" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches);
-    document.documentElement.classList.toggle("pf-v5-theme-dark", dark);
+    document.documentElement.classList.toggle("pf-v6-theme-dark", dark);
 }
 
 window.addEventListener("storage", event => {

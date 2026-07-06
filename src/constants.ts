@@ -1,13 +1,13 @@
-import type { BackendId, UiPrefs, UnitScope } from "./types";
+import type { BackendId, BackendProtocol, UiPrefs, UnitScope } from "./types";
 
 /** Machine-wide plugin configuration (JSON), readable by any admin session. */
 export const CONFIG_PATH = "/etc/cockpit/cockpitremote.json";
 
-/** Root-owned directory for plugin-managed files (x11vnc password file). */
-export const PLUGIN_STATE_DIR = "/etc/cockpitremote";
-export const X11VNC_PASSWD_PATH = `${PLUGIN_STATE_DIR}/x11vnc.passwd`;
-
-export const DEFAULT_VNC_PORT = 5901;
+export const DEFAULT_VNC_PORT = 5900;
+export const DEFAULT_RDP_PORT = 3389;
+export const GUACD_ADDRESS = "localhost";
+export const GUACD_PORT = 4822;
+export const RDP_DPI = 96;
 export const CONNECT_TIMEOUT_MS = 15000;
 
 export const LOG_LINE_CHOICES = [100, 200, 500, 1000] as const;
@@ -34,6 +34,7 @@ export const DEFAULT_PREFS: UiPrefs = {
 export interface BackendDef {
     id: BackendId;
     label: string;
+    protocol: BackendProtocol;
     /** Binary names probed in order; the first found wins. */
     binaries: string[];
     versionFlag: "-version" | "--version";
@@ -45,75 +46,17 @@ export interface BackendDef {
     unitScope: UnitScope;
     defaultPort: number;
     description: string;
-    packages: { dnf: string; apt: string; zypper: string };
-    /** Whether the plugin can manage a password for it via vncpasswd. */
+    /** Whether the plugin can manage a password for this backend. */
     supportsPasswordTool: boolean;
     /** Whether connecting/managing it is supported by this plugin version. */
     manageable: boolean;
-    /** Whether the setup guide should offer to install it when missing. */
-    offerInstall: boolean;
 }
 
 export const BACKENDS: BackendDef[] = [
     {
-        id: "tigervnc",
-        label: "TigerVNC (virtual desktop session)",
-        binaries: ["Xvnc", "Xtigervnc"],
-        versionFlag: "-version",
-        unitPrefix: "vncserver@",
-        defaultUnit: "vncserver@:1.service",
-        unitScope: "system",
-        defaultPort: 5901,
-        description:
-            "Runs a separate virtual desktop session on the host. Recommended for servers " +
-            "and for modern Fedora/RHEL Workstation, where the physical GNOME Wayland " +
-            "session cannot be shared over VNC.",
-        packages: {
-            dnf: "tigervnc-server",
-            apt: "tigervnc-standalone-server",
-            zypper: "tigervnc",
-        },
-        supportsPasswordTool: true,
-        manageable: true,
-        offerInstall: true,
-    },
-    {
-        id: "x11vnc",
-        label: "x11vnc (share existing X11 session)",
-        binaries: ["x11vnc"],
-        versionFlag: "-version",
-        unitPrefix: "x11vnc",
-        defaultUnit: "x11vnc.service",
-        unitScope: "system",
-        defaultPort: 5900,
-        description:
-            "Mirrors an already-running X11 session (the physical monitor). Requires the " +
-            "host to run Xorg — not available on GNOME Wayland desktops.",
-        packages: { dnf: "x11vnc", apt: "x11vnc", zypper: "x11vnc" },
-        supportsPasswordTool: true,
-        manageable: true,
-        offerInstall: true,
-    },
-    {
-        id: "wayvnc",
-        label: "wayvnc (wlroots Wayland compositors)",
-        binaries: ["wayvnc"],
-        versionFlag: "--version",
-        unitPrefix: "wayvnc",
-        defaultUnit: "wayvnc.service",
-        unitScope: "system",
-        defaultPort: 5900,
-        description:
-            "Shares a Wayland session on wlroots-based compositors (Sway, Hyprland, ...). " +
-            "Not compatible with GNOME or KDE Wayland sessions.",
-        packages: { dnf: "wayvnc", apt: "wayvnc", zypper: "wayvnc" },
-        supportsPasswordTool: false,
-        manageable: true,
-        offerInstall: true,
-    },
-    {
         id: "grd",
-        label: "GNOME Remote Desktop",
+        label: "GNOME VNC",
+        protocol: "vnc",
         binaries: ["grdctl"],
         versionFlag: "--version",
         unitPrefix: "gnome-remote-desktop",
@@ -121,18 +64,26 @@ export const BACKENDS: BackendDef[] = [
         unitScope: "user",
         defaultPort: 5900,
         description:
-            "GNOME's built-in remote desktop, sharing the logged-in user's session. " +
-            "Upstream is moving to RDP-only, but many distribution builds (Fedora among " +
-            "them) still ship the VNC backend — when it is detected, the console can " +
-            "connect to it. Configured per user with grdctl.",
-        packages: {
-            dnf: "gnome-remote-desktop",
-            apt: "gnome-remote-desktop",
-            zypper: "gnome-remote-desktop",
-        },
+            "GNOME Remote Desktop's VNC endpoint, sharing the logged-in GNOME session " +
+            "when this GNOME build provides VNC support.",
+        supportsPasswordTool: true,
+        manageable: true,
+    },
+    {
+        id: "grd-rdp",
+        label: "GNOME RDP",
+        protocol: "rdp",
+        binaries: ["grdctl"],
+        versionFlag: "--version",
+        unitPrefix: "gnome-remote-desktop",
+        defaultUnit: "gnome-remote-desktop.service",
+        unitScope: "user",
+        defaultPort: DEFAULT_RDP_PORT,
+        description:
+            "GNOME Remote Desktop's RDP endpoint, sharing the logged-in GNOME session " +
+            "through the standard Remote Desktop Protocol.",
         supportsPasswordTool: false,
         manageable: true,
-        offerInstall: false,
     },
 ];
 

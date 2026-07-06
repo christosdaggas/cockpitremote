@@ -20,7 +20,7 @@ export const DEFAULT_CONFIG: RemoteConfig = {
     backend: null,
     unit: "",
     address: "127.0.0.1",
-    port: 5901,
+    port: 5900,
     geometry: "1280x800",
     vncUser: "",
 };

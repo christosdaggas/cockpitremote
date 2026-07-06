@@ -1,4 +1,5 @@
-export type BackendId = "tigervnc" | "x11vnc" | "wayvnc" | "grd";
+export type BackendId = "grd" | "grd-rdp";
+export type BackendProtocol = "vnc" | "rdp";
 
 export type SystemdAction = "start" | "stop" | "restart" | "enable" | "disable";
 
@@ -29,6 +30,7 @@ export interface SessionInfo {
 export interface BackendInfo {
     id: BackendId;
     label: string;
+    protocol: BackendProtocol;
     binaryPath: string | null;
     version: string | null;
     detectedUnit: string | null;
@@ -51,9 +53,9 @@ export interface RemoteConfig {
     unit: string;
     address: string;
     port: number;
-    /** Desired virtual-desktop geometry; guidance for TigerVNC setup only. */
+    /** Optional geometry hint retained for existing config files. */
     geometry: string;
-    /** Unix user owning the TigerVNC session (placement of ~/.vnc/passwd). */
+    /** Optional legacy VNC user retained for existing config files. */
     vncUser: string;
 }
 
@@ -73,11 +75,4 @@ export interface HealthCheck {
     label: string;
     state: HealthState;
     detail: string;
-}
-
-export interface OsInfo {
-    id: string;
-    idLike: string[];
-    prettyName: string;
-    packageManager: "dnf" | "apt" | "zypper" | null;
 }

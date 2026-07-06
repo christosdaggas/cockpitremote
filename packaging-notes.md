@@ -42,10 +42,9 @@ package formats.
 
 - `cockpit` ≥ 266 (RPM: `Requires: cockpit-bridge >= 266`; DEB:
   `Depends: cockpit-bridge (>= 266)`)
-- Recommends (not Requires) a VNC server: `tigervnc-server` (RPM) /
-  `tigervnc-standalone-server` (DEB). The plugin runs without one and guides
-  the admin through installation, so a *Recommends*/*Suggests* relationship is
-  correct.
+- Recommends (not Requires) GNOME Remote Desktop, guacd, libguac-client-vnc,
+  and libguac-client-rdp. The plugin can load without them and report what is
+  missing, so *Recommends* is correct.
 
 ## Build dependencies
 
@@ -66,12 +65,15 @@ Source0:        %{url}/archive/v%{version}/cockpitremote-%{version}.tar.gz
 BuildArch:      noarch
 BuildRequires:  nodejs >= 18, npm, make
 Requires:       cockpit-bridge >= 266
-Recommends:     tigervnc-server
+Recommends:     gnome-remote-desktop
+Recommends:     guacd
+Recommends:     libguac-client-vnc
+Recommends:     libguac-client-rdp
 
 %description
-Cockpit application providing a browser-based remote desktop (noVNC over
-Cockpit's authenticated WebSocket) to the host, with VNC backend detection,
-service management, health checks and logs.
+Cockpit application providing a browser-based remote desktop to the host, with
+GNOME VNC/RDP through local guacd, backend detection, service management, health
+checks and logs.
 
 %prep
 %autosetup -n cockpitremote-%{version}
@@ -93,7 +95,7 @@ make install PREFIX=/usr DESTDIR=%{buildroot}
 ## DEB outline
 
 - `debian/control`: `Package: cockpit-cockpitremote`, `Architecture: all`,
-  `Depends: cockpit-bridge (>= 266)`, `Suggests: tigervnc-standalone-server`,
+  `Depends: cockpit-bridge (>= 266)`, `Recommends: gnome-remote-desktop, guacd, libguac-client-vnc, libguac-client-rdp`,
   `Build-Depends: debhelper-compat (= 13), nodejs (>= 18), npm, make`.
 - `debian/rules`: dh defaults with
   `override_dh_auto_build: npm ci && NODE_ENV=production node build.js`
@@ -108,9 +110,9 @@ Configuration created at runtime (not owned by the package, do **not**
 remove on upgrade; consider `%ghost` in RPM):
 
 - `/etc/cockpit/cockpitremote.json` — plugin settings
-- `/etc/cockpitremote/` — x11vnc password file (created on demand, mode 700)
+- GNOME Remote Desktop stores its own secrets; the plugin does not own password files.
 
 ## systemd service requirements
 
-The plugin *manages* third-party units (e.g. `vncserver@:1.service` from
-tigervnc-server) but ships none of its own.
+The plugin *manages* GNOME Remote Desktop's `gnome-remote-desktop.service` but
+ships no systemd unit of its own.

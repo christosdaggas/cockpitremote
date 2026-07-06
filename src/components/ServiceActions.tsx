@@ -64,7 +64,7 @@ export function ServiceActions({ unit, scope, status, onRefresh }: ServiceAction
 
     return (
         <>
-            <Flex spaceItems={{ default: "spaceItemsSm" }}>
+            <Flex className="ctr-service-actions" spaceItems={{ default: "spaceItemsSm" }}>
                 <FlexItem>
                     <Button variant="primary" size="sm" isDisabled={disabledAll || active}
                             isLoading={busy === "start"} onClick={() => request("start")}>

@@ -28,7 +28,7 @@ describe("buildConsoleUrl", () => {
 
     it("builds the cockpit-machines-style channel WebSocket URL", () => {
         // jsdom's default location is http://localhost:3000/
-        const url = buildConsoleUrl(5901);
+        const url = buildConsoleUrl(5900);
         expect(url.startsWith("ws://localhost:3000/cockpit/channel/token123?")).toBe(true);
 
         const query = url.split("?")[1];
@@ -37,7 +37,7 @@ describe("buildConsoleUrl", () => {
             payload: "stream",
             binary: "raw",
             address: "127.0.0.1",
-            port: 5901,
+            port: 5900,
         });
         // The port must be a JSON number, not a string.
         expect(typeof options.port).toBe("number");
@@ -52,12 +52,12 @@ describe("buildConsoleUrl", () => {
     it("validates port and address before building anything", () => {
         expect(() => buildConsoleUrl(0)).toThrow(ValidationError);
         expect(() => buildConsoleUrl(70000)).toThrow(ValidationError);
-        expect(() => buildConsoleUrl(5901, "evil.example.com; reboot")).toThrow(ValidationError);
+        expect(() => buildConsoleUrl(5900, "evil.example.com; reboot")).toThrow(ValidationError);
     });
 
     it("throws a clear error when the transport API is unavailable", () => {
         mockCockpit.transport = undefined;
         expect(channelTransportAvailable()).toBe(false);
-        expect(() => buildConsoleUrl(5901)).toThrow(ChannelUnsupportedError);
+        expect(() => buildConsoleUrl(5900)).toThrow(ChannelUnsupportedError);
     });
 });

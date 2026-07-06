@@ -5,7 +5,9 @@ import {
     buildChownArgs,
     buildGetentPasswdArgs,
     buildGrdctlStatusArgs,
-    buildInstallPackagesArgs,
+    buildGrdctlVncEnableArgs,
+    buildGrdctlVncSetAuthMethodArgs,
+    buildGrdctlVncSetPasswordArgs,
     buildJournalArgs,
     buildListUnitFilesArgs,
     buildLoginctlShowSessionArgs,
@@ -20,10 +22,10 @@ import { ValidationError } from "../src/utils/validation";
 
 describe("buildSystemctlActionArgs", () => {
     it("produces exact argv arrays", () => {
-        expect(buildSystemctlActionArgs("restart", "vncserver@:1.service"))
-            .toEqual(["systemctl", "restart", "vncserver@:1.service"]);
-        expect(buildSystemctlActionArgs("enable", "x11vnc.service"))
-            .toEqual(["systemctl", "enable", "x11vnc.service"]);
+        expect(buildSystemctlActionArgs("restart", "example.service"))
+            .toEqual(["systemctl", "restart", "example.service"]);
+        expect(buildSystemctlActionArgs("enable", "gnome-remote-desktop.service", "user"))
+            .toEqual(["systemctl", "--user", "enable", "gnome-remote-desktop.service"]);
     });
 
     it("addresses the session manager for user-scoped units", () => {
@@ -32,16 +34,16 @@ describe("buildSystemctlActionArgs", () => {
     });
 
     it("rejects unknown actions", () => {
-        expect(() => buildSystemctlActionArgs("mask" as never, "x11vnc.service"))
+        expect(() => buildSystemctlActionArgs("mask" as never, "example.service"))
             .toThrow(ValidationError);
     });
 
     it.each([
-        "x11vnc.service; rm -rf /",
+        "example.service; rm -rf /",
         "$(reboot).service",
         "-p.service",
         "a b.service",
-        "x11vnc.service\n",
+        "example.service\n",
     ])("rejects injection attempt %j", unit => {
         expect(() => buildSystemctlActionArgs("start", unit)).toThrow(ValidationError);
     });
@@ -49,8 +51,8 @@ describe("buildSystemctlActionArgs", () => {
 
 describe("buildSystemctlShowArgs", () => {
     it("asks for a fixed property list", () => {
-        expect(buildSystemctlShowArgs("wayvnc.service")).toEqual([
-            "systemctl", "show", "wayvnc.service",
+        expect(buildSystemctlShowArgs("example.service")).toEqual([
+            "systemctl", "show", "example.service",
             "--property=LoadState,ActiveState,SubState,UnitFileState,ExecMainStatus",
             "--no-pager",
         ]);
@@ -67,21 +69,21 @@ describe("buildSystemctlShowArgs", () => {
 
 describe("buildJournalArgs", () => {
     it("builds the documented journalctl invocation", () => {
-        expect(buildJournalArgs("x11vnc.service", 200)).toEqual([
-            "journalctl", "-u", "x11vnc.service", "-n", "200", "--no-pager", "-o", "short-iso",
+        expect(buildJournalArgs("example.service", 200)).toEqual([
+            "journalctl", "-u", "example.service", "-n", "200", "--no-pager", "-o", "short-iso",
         ]);
     });
 
     it("appends a validated priority filter", () => {
-        expect(buildJournalArgs("x11vnc.service", 100, 3)).toEqual([
-            "journalctl", "-u", "x11vnc.service", "-n", "100", "--no-pager", "-o", "short-iso", "-p", "3",
+        expect(buildJournalArgs("example.service", 100, 3)).toEqual([
+            "journalctl", "-u", "example.service", "-n", "100", "--no-pager", "-o", "short-iso", "-p", "3",
         ]);
     });
 
     it("rejects arbitrary line counts and priorities", () => {
-        expect(() => buildJournalArgs("x11vnc.service", 12345)).toThrow(ValidationError);
-        expect(() => buildJournalArgs("x11vnc.service", 200, 99)).toThrow(ValidationError);
-        expect(() => buildJournalArgs("x11vnc.service", 200, 1.5)).toThrow(ValidationError);
+        expect(() => buildJournalArgs("example.service", 12345)).toThrow(ValidationError);
+        expect(() => buildJournalArgs("example.service", 200, 99)).toThrow(ValidationError);
+        expect(() => buildJournalArgs("example.service", 200, 1.5)).toThrow(ValidationError);
     });
 
     it("rejects unit injection", () => {
@@ -98,9 +100,9 @@ describe("buildJournalArgs", () => {
 
 describe("buildListUnitFilesArgs", () => {
     it("passes through safe glob patterns", () => {
-        expect(buildListUnitFilesArgs(["vncserver@*", "x11vnc*"])).toEqual([
+        expect(buildListUnitFilesArgs(["example*", "gnome-remote-desktop*"])).toEqual([
             "systemctl", "list-unit-files", "--type=service",
-            "--no-legend", "--no-pager", "--plain", "vncserver@*", "x11vnc*",
+            "--no-legend", "--no-pager", "--plain", "example*", "gnome-remote-desktop*",
         ]);
     });
 
@@ -122,19 +124,30 @@ describe("buildGrdctlStatusArgs", () => {
     it("takes no arguments at all", () => {
         expect(buildGrdctlStatusArgs()).toEqual(["grdctl", "status"]);
     });
+
+    it("builds GNOME Remote Desktop VNC configuration commands without password argv", () => {
+        expect(buildGrdctlVncEnableArgs()).toEqual(["grdctl", "vnc", "enable"]);
+        expect(buildGrdctlVncSetPasswordArgs()).toEqual(["grdctl", "vnc", "set-password"]);
+        expect(buildGrdctlVncSetAuthMethodArgs("password")).toEqual([
+            "grdctl", "vnc", "set-auth-method", "password",
+        ]);
+    });
+
+    it("rejects unknown GNOME Remote Desktop VNC auth methods", () => {
+        expect(() => buildGrdctlVncSetAuthMethodArgs("none" as never)).toThrow(ValidationError);
+    });
 });
 
 describe("binary probes", () => {
     it("builds which/version argv", () => {
-        expect(buildWhichArgs("x11vnc")).toEqual(["which", "x11vnc"]);
-        expect(buildVersionArgs("Xvnc", "-version")).toEqual(["Xvnc", "-version"]);
-        expect(buildVersionArgs("wayvnc", "--version")).toEqual(["wayvnc", "--version"]);
+        expect(buildWhichArgs("grdctl")).toEqual(["which", "grdctl"]);
+        expect(buildVersionArgs("grdctl", "--version")).toEqual(["grdctl", "--version"]);
     });
 
     it("rejects binary names that look like options or paths", () => {
         expect(() => buildWhichArgs("-x")).toThrow(ValidationError);
         expect(() => buildWhichArgs("/bin/sh")).toThrow(ValidationError);
-        expect(() => buildWhichArgs("x11vnc; reboot")).toThrow(ValidationError);
+        expect(() => buildWhichArgs("example; reboot")).toThrow(ValidationError);
     });
 });
 
@@ -148,8 +161,8 @@ describe("password plumbing", () => {
 
     it("file management argv is validated", () => {
         expect(buildMkdirArgs("/etc/cockpitremote")).toEqual(["mkdir", "-p", "/etc/cockpitremote"]);
-        expect(buildChmodArgs("600", "/etc/cockpitremote/x11vnc.passwd"))
-            .toEqual(["chmod", "600", "/etc/cockpitremote/x11vnc.passwd"]);
+        expect(buildChmodArgs("600", "/etc/cockpitremote/grd.passwd"))
+            .toEqual(["chmod", "600", "/etc/cockpitremote/grd.passwd"]);
         expect(buildChownArgs("alice", "/home/alice/.vnc"))
             .toEqual(["chown", "alice:", "/home/alice/.vnc"]);
         expect(buildGetentPasswdArgs("alice")).toEqual(["getent", "passwd", "alice"]);
@@ -158,23 +171,6 @@ describe("password plumbing", () => {
         expect(() => buildMkdirArgs("/tmp/../etc")).toThrow(ValidationError);
         expect(() => buildChownArgs("alice;reboot", "/home/alice")).toThrow(ValidationError);
         expect(() => buildGetentPasswdArgs("alice bob")).toThrow(ValidationError);
-    });
-});
-
-describe("buildInstallPackagesArgs", () => {
-    it("builds per-package-manager argv", () => {
-        expect(buildInstallPackagesArgs("dnf", ["tigervnc-server"]))
-            .toEqual(["dnf", "install", "-y", "tigervnc-server"]);
-        expect(buildInstallPackagesArgs("apt", ["x11vnc"]))
-            .toEqual(["apt-get", "install", "-y", "x11vnc"]);
-        expect(buildInstallPackagesArgs("zypper", ["wayvnc"]))
-            .toEqual(["zypper", "--non-interactive", "install", "wayvnc"]);
-    });
-
-    it("rejects empty lists, bad names and unknown managers", () => {
-        expect(() => buildInstallPackagesArgs("dnf", [])).toThrow(ValidationError);
-        expect(() => buildInstallPackagesArgs("dnf", ["-y; reboot"])).toThrow(ValidationError);
-        expect(() => buildInstallPackagesArgs("pacman" as never, ["x"])).toThrow(ValidationError);
     });
 });
 

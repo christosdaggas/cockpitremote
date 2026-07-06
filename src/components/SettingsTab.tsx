@@ -16,15 +16,13 @@ import {
     TextInput,
 } from "@patternfly/react-core";
 
-import { BACKENDS, backendDef } from "../constants";
+import { BACKENDS, DEFAULT_RDP_PORT, backendDef } from "../constants";
 import { useNotify } from "../notifications";
 import type { BackendId, BackendInfo, RemoteConfig } from "../types";
 import { toUserMessage } from "../utils/errors";
 import {
     ValidationError,
-    displayFromUnit,
     isLoopback,
-    portForDisplay,
     portWarning,
     validateAddress,
     validateGeometry,
@@ -37,6 +35,7 @@ import { PasswordModal } from "./PasswordModal";
 export interface SettingsTabProps {
     config: RemoteConfig;
     save: (next: RemoteConfig) => Promise<void>;
+    onRefresh: () => Promise<void>;
     /** Detection results, used to gate and pre-fill backend choices. */
     backends: BackendInfo[] | null;
 }
@@ -85,9 +84,6 @@ function validateForm(form: FormState): { errors: Errors; config?: RemoteConfig 
         check("geometry", () => validateGeometry(form.geometry));
     if (form.vncUser)
         check("vncUser", () => validateUsername(form.vncUser));
-    if (form.backend === "tigervnc" && !form.vncUser)
-        errors.vncUser = "TigerVNC needs the Unix user that owns the virtual desktop session.";
-
     if (Object.keys(errors).length > 0)
         return { errors };
     return {
@@ -103,7 +99,7 @@ function validateForm(form: FormState): { errors: Errors; config?: RemoteConfig 
     };
 }
 
-export function SettingsTab({ config, save, backends }: SettingsTabProps) {
+export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabProps) {
     const notify = useNotify();
     const [form, setForm] = useState<FormState>(() => fromConfig(config));
     const [errors, setErrors] = useState<Errors>({});
@@ -134,14 +130,11 @@ export function SettingsTab({ config, save, backends }: SettingsTabProps) {
             const unit = prev.unit && prev.unit.startsWith(def.unitPrefix)
                 ? prev.unit
                 : (info?.detectedUnit ?? def.defaultUnit);
-            const display = displayFromUnit(unit);
             return {
                 ...prev,
                 backend: value,
                 unit,
-                port: String(display !== null
-                    ? portForDisplay(display)
-                    : (info?.detectedPort ?? def.defaultPort)),
+                port: String(info?.detectedPort ?? def.defaultPort),
             };
         });
         setErrors({});
@@ -166,8 +159,13 @@ export function SettingsTab({ config, save, backends }: SettingsTabProps) {
     };
 
     const selectedDef = form.backend ? backendDef(form.backend as BackendId) : null;
+    const canManagePassword = selectedDef?.supportsPasswordTool === true;
     const portNum = Number(form.port);
-    const portAdvice = !errors.port && Number.isInteger(portNum) ? portWarning(portNum) : null;
+    const portAdvice = !errors.port && Number.isInteger(portNum)
+        ? (selectedDef?.protocol === "rdp" && portNum !== DEFAULT_RDP_PORT
+            ? `RDP conventionally listens on port ${DEFAULT_RDP_PORT}. Double-check this value.`
+            : portWarning(portNum))
+        : null;
     const unitAdvice = !errors.unit && selectedDef && form.unit && !form.unit.startsWith(selectedDef.unitPrefix)
         ? `This does not look like a ${selectedDef.label} unit — its default is "${selectedDef.defaultUnit}".`
         : null;
@@ -190,10 +188,10 @@ export function SettingsTab({ config, save, backends }: SettingsTabProps) {
             <CardTitle>Connection settings</CardTitle>
             <CardBody>
                 <Form isHorizontal maxWidth="720px">
-                    <FormGroup label="VNC backend" fieldId="ctr-backend">
+                    <FormGroup label="Remote desktop backend" fieldId="ctr-backend">
                         <FormSelect id="ctr-backend" value={form.backend}
                                     onChange={(_event, value) => onBackendChange(value)}
-                                    aria-label="VNC backend">
+                                    aria-label="Remote desktop backend">
                             <FormSelectOption value="" label="— none selected —" />
                             {BACKENDS.map(def => {
                                 const info = backends?.find(b => b.id === def.id);
@@ -218,79 +216,57 @@ export function SettingsTab({ config, save, backends }: SettingsTabProps) {
                         <TextInput id="ctr-unit" value={form.unit}
                                    onChange={(_event, value) => set("unit", value)}
                                    validated={errors.unit ? "error" : "default"}
-                                   placeholder="vncserver@:1.service"
-                                   aria-label="systemd unit" />
+                                    placeholder="gnome-remote-desktop.service"
+                                    aria-label="systemd unit" />
                         {helper("unit", unitAdvice)}
                     </FormGroup>
 
-                    <FormGroup label="VNC address" fieldId="ctr-address">
+                    <FormGroup label="Target address" fieldId="ctr-address">
                         <TextInput id="ctr-address" value={form.address}
                                    onChange={(_event, value) => set("address", value)}
                                    validated={errors.address ? "error" : "default"}
-                                   aria-label="VNC address" />
+                                   aria-label="Target address" />
                         {helper("address", !errors.address && !isLoopback(form.address)
                             ? "Non-loopback address: the VNC server should normally listen on 127.0.0.1 only, since Cockpit tunnels the traffic."
                             : null)}
                     </FormGroup>
 
-                    <FormGroup label="VNC port" fieldId="ctr-port">
+                    <FormGroup label="Target port" fieldId="ctr-port">
                         <TextInput id="ctr-port" value={form.port} type="number"
                                    onChange={(_event, value) => set("port", value)}
                                    validated={errors.port ? "error" : "default"}
-                                   aria-label="VNC port" />
+                                   aria-label="Target port" />
                         {helper("port", portAdvice)}
                     </FormGroup>
 
-                    {form.backend === "tigervnc" && (
-                        <>
-                            <FormGroup label="Session user" fieldId="ctr-vnc-user">
-                                <TextInput id="ctr-vnc-user" value={form.vncUser}
-                                           onChange={(_event, value) => set("vncUser", value)}
-                                           validated={errors.vncUser ? "error" : "default"}
-                                           placeholder="username mapped in /etc/tigervnc/vncserver.users"
-                                           aria-label="TigerVNC session user" />
-                                {helper("vncUser")}
-                            </FormGroup>
-                            <FormGroup label="Desired geometry" fieldId="ctr-geometry">
-                                <TextInput id="ctr-geometry" value={form.geometry}
-                                           onChange={(_event, value) => set("geometry", value)}
-                                           validated={errors.geometry ? "error" : "default"}
-                                           placeholder="1280x800"
-                                           aria-label="Desired geometry" />
-                                {helper("geometry", "Applied via the user's ~/.vnc/config (geometry=…); shown here as guidance.")}
-                            </FormGroup>
-                        </>
-                    )}
-
-                    {selectedDef?.id === "wayvnc" && (
-                        <Alert variant="info" isInline isPlain
-                               title="wayvnc authentication is configured in its own config file (TLS/PAM); this plugin does not manage wayvnc passwords." />
-                    )}
-
                     {selectedDef?.id === "grd" && (
                         <Alert variant="info" isInline isPlain
-                               title="GNOME Remote Desktop runs per user and is configured with grdctl. Whether its VNC backend is available depends on the distribution build — the Dashboard shows what was detected." />
+                               title="GNOME VNC runs per user. Use password authentication for unattended Cockpit connections; prompt mode requires approval on the host desktop." />
+                    )}
+
+                    {selectedDef?.id === "grd-rdp" && (
+                        <Alert variant="info" isInline isPlain
+                               title="GNOME RDP uses guacd for the browser console. Install and start guacd on this host if the Dashboard reports the gateway is missing." />
                     )}
 
                     <ActionGroup>
                         <Button variant="primary" onClick={submit} isLoading={saving} isDisabled={saving}>
                             Save settings
                         </Button>
-                        {selectedDef?.supportsPasswordTool && (
+                        {canManagePassword && (
                             <Button variant="secondary"
-                                    isDisabled={selectedDef.id === "tigervnc" && !form.vncUser}
-                                    onClick={() => setPasswordOpen(true)}>
+                                     onClick={() => setPasswordOpen(true)}>
                                 Set VNC password…
                             </Button>
                         )}
                     </ActionGroup>
                 </Form>
-                {selectedDef?.supportsPasswordTool && (
+                {canManagePassword && (
                     <PasswordModal
                         backend={selectedDef.id}
-                        vncUser={form.vncUser}
                         isOpen={passwordOpen}
                         onClose={() => setPasswordOpen(false)}
+                        onUpdated={onRefresh}
                     />
                 )}
             </CardBody>

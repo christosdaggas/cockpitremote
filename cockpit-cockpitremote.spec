@@ -10,12 +10,15 @@ BuildRequires:  make
 BuildRequires:  nodejs >= 18
 BuildRequires:  npm
 Requires:       cockpit-bridge >= 266
-Recommends:     tigervnc-server
+Recommends:     gnome-remote-desktop
+Recommends:     guacd
+Recommends:     libguac-client-vnc
+Recommends:     libguac-client-rdp
 
 %description
-Cockpit application providing a browser-based remote desktop (noVNC over
-Cockpit's authenticated WebSocket) to the host, with VNC backend detection,
-service management, health checks and logs.
+Cockpit application providing a browser-based remote desktop to the host, with
+GNOME VNC/RDP through local guacd, backend detection, service management,
+health checks and logs.
 
 %prep
 %autosetup -n cockpitremote-%{version}

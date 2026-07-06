@@ -45,15 +45,13 @@ describe("parseKeyValueOutput", () => {
 describe("parseUnitFiles", () => {
     it("parses list-unit-files --no-legend --plain output", () => {
         const fixture = [
-            "vncserver@.service                         disabled        disabled",
             "gnome-remote-desktop.service               static          -",
-            "x11vnc.service                             enabled         enabled",
+            "example.service                            enabled         enabled",
             "",
         ].join("\n");
         expect(parseUnitFiles(fixture)).toEqual([
-            "vncserver@.service",
             "gnome-remote-desktop.service",
-            "x11vnc.service",
+            "example.service",
         ]);
     });
 
@@ -66,15 +64,15 @@ describe("parseUnitFiles", () => {
 describe("parseSsListening", () => {
     it("parses ss -tlnH output including IPv6 and wildcards", () => {
         const fixture = [
-            "LISTEN 0      128        127.0.0.1:5901       0.0.0.0:*",
-            "LISTEN 0      5          [::1]:5901              [::]:*",
+            "LISTEN 0      128        127.0.0.1:5900       0.0.0.0:*",
+            "LISTEN 0      5          [::1]:5900              [::]:*",
             "LISTEN 0      511                *:80                *:*",
             "LISTEN 0      4096       0.0.0.0:9090         0.0.0.0:*",
             "",
         ].join("\n");
         expect(parseSsListening(fixture)).toEqual([
-            { address: "127.0.0.1", port: 5901 },
-            { address: "::1", port: 5901 },
+            { address: "127.0.0.1", port: 5900 },
+            { address: "::1", port: 5900 },
             { address: "*", port: 80 },
             { address: "0.0.0.0", port: 9090 },
         ]);
@@ -144,9 +142,11 @@ describe("parseGrdStatus", () => {
         "RDP:",
         "\tStatus: enabled",
         "\tPort: 3389",
+        "\tAuthentication methods: credentials",
         "\tTLS certificate: /home/alice/.local/share/gnome-remote-desktop/certificates/rdp-tls.crt",
         "\tView-only: no",
         "\tUsername: (hidden)",
+        "\tPassword: (hidden)",
         "VNC:",
         "\tStatus: disabled",
         "\tPort: 5900",
@@ -159,6 +159,12 @@ describe("parseGrdStatus", () => {
 
     it("reports VNC capability, enablement, port, view-only and auth", () => {
         expect(parseGrdStatus(withVnc)).toEqual({
+            hasRdp: true,
+            rdpEnabled: true,
+            rdpPort: 3389,
+            rdpViewOnly: false,
+            rdpAuthMethods: "credentials",
+            rdpPasswordEmpty: false,
             hasVnc: true,
             vncEnabled: false,
             vncPort: 5900,
@@ -175,6 +181,12 @@ describe("parseGrdStatus", () => {
             .replace("\tAuth method: prompt", "\tAuth method: password")
             .replace("\tPassword: (empty)", "\tPassword: (hidden)");
         expect(parseGrdStatus(enabled)).toEqual({
+            hasRdp: true,
+            rdpEnabled: true,
+            rdpPort: 3389,
+            rdpViewOnly: false,
+            rdpAuthMethods: "credentials",
+            rdpPasswordEmpty: false,
             hasVnc: true,
             vncEnabled: true,
             vncPort: 5900,
@@ -187,6 +199,12 @@ describe("parseGrdStatus", () => {
     it("detects RDP-only builds (no VNC section)", () => {
         const rdpOnly = withVnc.split("VNC:")[0];
         expect(parseGrdStatus(rdpOnly)).toEqual({
+            hasRdp: true,
+            rdpEnabled: true,
+            rdpPort: 3389,
+            rdpViewOnly: false,
+            rdpAuthMethods: "credentials",
+            rdpPasswordEmpty: false,
             hasVnc: false,
             vncEnabled: false,
             vncPort: null,
@@ -201,6 +219,12 @@ describe("parseGrdStatus", () => {
         expect(parseGrdStatus(withVnc).vncPort).toBe(5900);
         const vncFirst = parseGrdStatus(withVnc.split("VNC:")[0] + "VNC:\n\tAuth method: prompt\n");
         expect(vncFirst).toEqual({
+            hasRdp: true,
+            rdpEnabled: true,
+            rdpPort: 3389,
+            rdpViewOnly: false,
+            rdpAuthMethods: "credentials",
+            rdpPasswordEmpty: false,
             hasVnc: true,
             vncEnabled: false,
             vncPort: null,
@@ -218,9 +242,8 @@ describe("parseGrdStatus", () => {
 
 describe("extractVersion", () => {
     it("finds versions in typical tool banners", () => {
-        expect(extractVersion("Xvnc TigerVNC 1.13.1 - built ...")).toBe("1.13.1");
-        expect(extractVersion("x11vnc: 0.9.16 lastmod: 2019-01-05")).toBe("0.9.16");
-        expect(extractVersion("wayvnc: v0.8.0")).toBe("0.8.0");
+        expect(extractVersion("grdctl 50.1")).toBe("50.1");
+        expect(extractVersion("exampled: v0.8.0")).toBe("0.8.0");
         expect(extractVersion("no version here")).toBeNull();
     });
 });

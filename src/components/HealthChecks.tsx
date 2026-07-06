@@ -14,7 +14,7 @@ export function HealthChecks({ checks }: { checks: HealthCheck[] }) {
             {checks.map(check => (
                 <DescriptionListGroup key={check.id}>
                     <DescriptionListTerm>{check.label}</DescriptionListTerm>
-                    <DescriptionListDescription>
+                    <DescriptionListDescription id={check.id}>
                         <HealthLabel state={check.state} text={check.state.toUpperCase()} />{" "}
                         {check.detail}
                     </DescriptionListDescription>

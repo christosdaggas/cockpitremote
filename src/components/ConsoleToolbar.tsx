@@ -11,7 +11,7 @@ import {
 } from "@patternfly/react-core";
 import { ExpandIcon } from "@patternfly/react-icons";
 
-import type { ConsoleState } from "../hooks/useRfb";
+import type { ConsoleState } from "../hooks/consoleState";
 import type { UiPrefs } from "../types";
 import { ConfirmDialog } from "./common/ConfirmDialog";
 
@@ -23,11 +23,21 @@ export interface ConsoleToolbarProps {
     onDisconnect: () => void;
     onCtrlAltDel: () => void;
     onFullscreen: () => void;
+    showEncodingPrefs?: boolean;
 }
 
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export function ConsoleToolbar({ state, prefs, updatePrefs, onConnect, onDisconnect, onCtrlAltDel, onFullscreen }: ConsoleToolbarProps) {
+export function ConsoleToolbar({
+    state,
+    prefs,
+    updatePrefs,
+    onConnect,
+    onDisconnect,
+    onCtrlAltDel,
+    onFullscreen,
+    showEncodingPrefs = true,
+}: ConsoleToolbarProps) {
     const connected = state.kind === "connected";
     const busy = state.kind === "connecting" || state.kind === "credentials";
     const [confirmCad, setConfirmCad] = useState(false);
@@ -70,30 +80,34 @@ export function ConsoleToolbar({ state, prefs, updatePrefs, onConnect, onDisconn
                                 onChange={(_event, checked) => updatePrefs({ scaleViewport: checked })}
                             />
                         </ToolbarItem>
-                        <ToolbarItem>
-                            <FormSelect
-                                value={String(prefs.qualityLevel)}
-                                onChange={(_event, value) => updatePrefs({ qualityLevel: Number(value) })}
-                                aria-label="Image quality"
-                                style={{ minWidth: "9rem" }}
-                            >
-                                {LEVELS.map(level => (
-                                    <FormSelectOption key={level} value={String(level)} label={`Quality ${level}`} />
-                                ))}
-                            </FormSelect>
-                        </ToolbarItem>
-                        <ToolbarItem>
-                            <FormSelect
-                                value={String(prefs.compressionLevel)}
-                                onChange={(_event, value) => updatePrefs({ compressionLevel: Number(value) })}
-                                aria-label="Compression level"
-                                style={{ minWidth: "10rem" }}
-                            >
-                                {LEVELS.map(level => (
-                                    <FormSelectOption key={level} value={String(level)} label={`Compression ${level}`} />
-                                ))}
-                            </FormSelect>
-                        </ToolbarItem>
+                        {showEncodingPrefs && (
+                            <ToolbarItem>
+                                <FormSelect
+                                    value={String(prefs.qualityLevel)}
+                                    onChange={(_event, value) => updatePrefs({ qualityLevel: Number(value) })}
+                                    aria-label="Image quality"
+                                    style={{ minWidth: "9rem" }}
+                                >
+                                    {LEVELS.map(level => (
+                                        <FormSelectOption key={level} value={String(level)} label={`Quality ${level}`} />
+                                    ))}
+                                </FormSelect>
+                            </ToolbarItem>
+                        )}
+                        {showEncodingPrefs && (
+                            <ToolbarItem>
+                                <FormSelect
+                                    value={String(prefs.compressionLevel)}
+                                    onChange={(_event, value) => updatePrefs({ compressionLevel: Number(value) })}
+                                    aria-label="Compression level"
+                                    style={{ minWidth: "10rem" }}
+                                >
+                                    {LEVELS.map(level => (
+                                        <FormSelectOption key={level} value={String(level)} label={`Compression ${level}`} />
+                                    ))}
+                                </FormSelect>
+                            </ToolbarItem>
+                        )}
                     </ToolbarGroup>
                 </ToolbarContent>
             </Toolbar>

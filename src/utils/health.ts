@@ -4,6 +4,7 @@
  */
 
 import type { BackendInfo, HealthCheck, ListeningSocket, RemoteConfig, SessionInfo } from "../types";
+import { GUACD_PORT } from "../constants";
 import { checkPort } from "../services/network";
 
 export interface HealthInput {
@@ -34,7 +35,7 @@ export function computeHealthChecks(input: HealthInput): HealthCheck[] {
     if (!backend) {
         checks.push({
             id: "backend",
-            label: "VNC backend",
+            label: "Remote desktop backend",
             state: "warning",
             detail: "No backend selected yet. Pick one on this page or in Settings.",
         });
@@ -42,8 +43,8 @@ export function computeHealthChecks(input: HealthInput): HealthCheck[] {
     }
 
     checks.push(backend.binaryPath
-        ? { id: "backend", label: "VNC backend", state: "ok", detail: `${backend.label} (${backend.binaryPath})` }
-        : { id: "backend", label: "VNC backend", state: "error", detail: `${backend.label} is not installed.` });
+        ? { id: "backend", label: "Remote desktop backend", state: "ok", detail: `${backend.label} (${backend.binaryPath})` }
+        : { id: "backend", label: "Remote desktop backend", state: "error", detail: `${backend.label} is not installed.` });
 
     if (activeUnit) {
         if (backend.status === null || backend.detectedUnit !== activeUnit) {
@@ -80,21 +81,23 @@ export function computeHealthChecks(input: HealthInput): HealthCheck[] {
     }
 
     const port = checkPort(sockets, config.port);
+    const protocolName = backend.protocol.toUpperCase();
     if (port.listening) {
         checks.push(port.localhostOnly
-            ? { id: "port", label: `VNC port ${config.port}`, state: "ok", detail: "Listening on loopback only" }
+            ? { id: "port", label: `${protocolName} port ${config.port}`, state: "ok", detail: "Listening on loopback only" }
             : {
                 id: "port",
-                label: `VNC port ${config.port}`,
+                label: `${protocolName} port ${config.port}`,
                 state: "warning",
-                detail: "Listening on non-loopback addresses. Traffic is tunneled through Cockpit — " +
-                    "consider binding the VNC server to 127.0.0.1 only.",
+                detail: backend.protocol === "vnc"
+                    ? "Listening on non-loopback addresses. Traffic is tunneled through Cockpit — consider blocking outside access with a firewall rule."
+                    : "Listening on non-loopback addresses. RDP clients can reach this port directly unless a firewall blocks it.",
             });
     } else {
         const serviceActive = backend.status?.activeState === "active";
         checks.push({
             id: "port",
-            label: `VNC port ${config.port}`,
+            label: `${protocolName} port ${config.port}`,
             state: serviceActive ? "error" : "warning",
             detail: serviceActive
                 ? "The service is active but nothing listens on this port. Check the port in Settings."
@@ -102,20 +105,28 @@ export function computeHealthChecks(input: HealthInput): HealthCheck[] {
         });
     }
 
-    if (backend.id === "x11vnc") {
-        checks.push(session?.type === "x11"
-            ? { id: "session", label: "Graphical session", state: "ok", detail: `X11 session on ${session.display ?? "unknown display"}` }
-            : {
-                id: "session",
-                label: "Graphical session",
-                state: "warning",
-                detail: "No active X11 session — x11vnc needs a running Xorg session to mirror.",
+    if (backend.id === "grd" || backend.id === "grd-rdp") {
+        const guacd = checkPort(sockets, GUACD_PORT);
+        if (guacd.listening) {
+            checks.push(guacd.localhostOnly
+                ? { id: "guacd", label: "guacd gateway", state: "ok", detail: `Listening on loopback port ${GUACD_PORT}` }
+                : {
+                    id: "guacd",
+                    label: "guacd gateway",
+                    state: "warning",
+                    detail: `Listening beyond loopback on port ${GUACD_PORT}. Cockpit only needs local access to guacd.`,
+                });
+        } else {
+            checks.push({
+                id: "guacd",
+                label: "guacd gateway",
+                state: "error",
+                detail: `guacd is not listening on port ${GUACD_PORT}. Install and start guacd for the browser console.`,
             });
-    } else if (backend.id === "wayvnc") {
-        checks.push(session?.type === "wayland"
-            ? { id: "session", label: "Graphical session", state: "ok", detail: `Wayland session (${session.desktop ?? "unknown compositor"})` }
-            : { id: "session", label: "Graphical session", state: "warning", detail: "No active Wayland session detected." });
-    } else if (backend.id === "grd") {
+        }
+    }
+
+    if (backend.id === "grd" || backend.id === "grd-rdp") {
         if (!session || (session.type !== "wayland" && session.type !== "x11")) {
             checks.push({
                 id: "session",

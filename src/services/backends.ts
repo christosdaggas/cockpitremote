@@ -10,7 +10,6 @@ import {
 import { probe, spawn } from "./spawn";
 import { getServiceStatus } from "./systemd";
 
-const SYSTEM_UNIT_PATTERNS = ["x11vnc*", "wayvnc*", "vncserver@*"];
 /*
  * GNOME Remote Desktop's session daemon is a user unit. A system unit of the
  * same name also exists (the RDP-only headless daemon) — that one is NOT the
@@ -18,16 +17,11 @@ const SYSTEM_UNIT_PATTERNS = ["x11vnc*", "wayvnc*", "vncserver@*"];
  */
 const USER_UNIT_PATTERNS = ["gnome-remote-desktop*"];
 
-/** Compositors known to implement the wlr screencopy protocol wayvnc needs. */
-const WLROOTS_DESKTOPS = ["sway", "hyprland", "wayfire", "river", "labwc", "niri"];
-
 export async function detectBackends(session: SessionInfo): Promise<BackendInfo[]> {
-    const [systemUnits, userUnits] = await Promise.all([
-        listUnitFiles(SYSTEM_UNIT_PATTERNS, "system"),
-        listUnitFiles(USER_UNIT_PATTERNS, "user"),
-    ]);
+    void session;
+    const userUnits = await listUnitFiles(USER_UNIT_PATTERNS, "user");
     return Promise.all(BACKENDS.map(def =>
-        detectOne(def, def.unitScope === "user" ? userUnits : systemUnits, session)));
+        detectOne(def, userUnits)));
 }
 
 async function listUnitFiles(patterns: string[], scope: "system" | "user"): Promise<string[]> {
@@ -50,22 +44,20 @@ async function findBinary(names: string[]): Promise<string | null> {
     return null;
 }
 
-async function detectOne(def: BackendDef, unitFiles: string[], session: SessionInfo): Promise<BackendInfo> {
+async function detectOne(def: BackendDef, unitFiles: string[]): Promise<BackendInfo> {
     const notes: string[] = [];
     const binaryPath = await findBinary(def.binaries);
 
     let version: string | null = null;
     if (binaryPath) {
         const binaryName = binaryPath.split("/").pop() ?? def.binaries[0];
-        // Version banners often go to stderr (Xvnc) — probe merges the streams.
+        // Some version banners go to stderr — probe merges the streams.
         const { output } = await probe(buildVersionArgs(binaryName, def.versionFlag));
         version = extractVersion(output);
     }
 
     // Prefer the exact default unit ("gnome-remote-desktop.service" must not
-    // lose to its "-headless"/"-handover" siblings), then any concrete unit;
-    // a template unit ("vncserver@.service") is not startable itself, so it
-    // only ever suggests the default instance.
+    // lose to its "-headless"/"-handover" siblings), then any concrete unit.
     const exact = unitFiles.find(u => u === def.defaultUnit);
     const concrete = unitFiles.find(u => u.startsWith(def.unitPrefix) && !u.includes("@."));
     const template = unitFiles.find(u => u === `${def.unitPrefix}.service` || u.endsWith("@.service"));
@@ -88,7 +80,7 @@ async function detectOne(def: BackendDef, unitFiles: string[], session: SessionI
 
     let supported = def.manageable;
     let detectedPort: number | null = null;
-    if (def.id === "grd" && binaryPath) {
+    if ((def.id === "grd" || def.id === "grd-rdp") && binaryPath) {
         // stderr must stay out of the parsed stream (err:"message" overrides
         // probe's err:"out"): grdctl mixes GLib warnings into the output.
         const { ok, output } = await probe(buildGrdctlStatusArgs(), { err: "message" });
@@ -96,10 +88,25 @@ async function detectOne(def: BackendDef, unitFiles: string[], session: SessionI
             // Failed or unrecognizable output is NOT proof of an RDP-only build.
             supported = false;
             notes.push("Could not read GNOME Remote Desktop's status (\"grdctl status\" failed), " +
-                "so VNC capability is unknown. Refresh to retry.");
+                "so endpoint capability is unknown. Refresh to retry.");
         } else {
             const grd = parseGrdStatus(output);
-            if (!grd.hasVnc) {
+            if (def.id === "grd-rdp") {
+                if (!grd.hasRdp) {
+                    supported = false;
+                    notes.push("This GNOME Remote Desktop build provides no RDP backend.");
+                } else {
+                    detectedPort = grd.rdpPort;
+                    notes.push("Runs in the logged-in user's GNOME session and uses the standard RDP protocol.");
+                    notes.push("The browser console uses local guacd as the RDP gateway.");
+                    if (!grd.rdpEnabled)
+                        notes.push("RDP is currently disabled. Enable it with GNOME Settings or grdctl.");
+                    if (grd.rdpViewOnly)
+                        notes.push("View-only mode is on, so remote input is ignored.");
+                    if (grd.rdpPasswordEmpty)
+                        notes.push("RDP password authentication is selected but no password is stored.");
+                }
+            } else if (!grd.hasVnc) {
                 supported = false;
                 notes.push("This GNOME Remote Desktop build provides no VNC backend (recent upstream " +
                     "versions are RDP-only) — the console cannot connect to it.");
@@ -126,21 +133,10 @@ async function detectOne(def: BackendDef, unitFiles: string[], session: SessionI
             }
         }
     }
-    if (def.id === "x11vnc" && binaryPath && session.type !== "x11")
-        notes.push("No active X11 session detected — x11vnc can only mirror a running Xorg session. Consider TigerVNC instead.");
-    if (def.id === "wayvnc" && binaryPath) {
-        const desktop = (session.desktop ?? "").toLowerCase();
-        if (session.type !== "wayland")
-            notes.push("No active Wayland session detected.");
-        else if (!WLROOTS_DESKTOPS.some(d => desktop.includes(d)))
-            notes.push(`The current compositor ("${session.desktop ?? "unknown"}") does not look wlroots-based — wayvnc likely cannot capture it.`);
-    }
-    if (def.id === "tigervnc" && binaryPath && !detectedUnit)
-        notes.push("TigerVNC is installed but no vncserver@ unit was found. See the setup guide below.");
-
     return {
         id: def.id,
         label: def.label,
+        protocol: def.protocol,
         binaryPath,
         version,
         detectedUnit,

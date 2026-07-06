@@ -9,7 +9,6 @@ import type { SystemdAction, UnitScope } from "../types";
 import {
     ValidationError,
     validateBinaryName,
-    validatePackageName,
     validatePath,
     validatePort,
     validateSessionId,
@@ -74,6 +73,21 @@ export function buildGrdctlStatusArgs(): string[] {
     return ["grdctl", "status"];
 }
 
+export function buildGrdctlVncEnableArgs(): string[] {
+    return ["grdctl", "vnc", "enable"];
+}
+
+/** Password is fed via stdin — it must never appear in any argv. */
+export function buildGrdctlVncSetPasswordArgs(): string[] {
+    return ["grdctl", "vnc", "set-password"];
+}
+
+export function buildGrdctlVncSetAuthMethodArgs(method: "password" | "prompt"): string[] {
+    if (method !== "password" && method !== "prompt")
+        throw new ValidationError(`Unsupported GNOME Remote Desktop VNC auth method: ${JSON.stringify(method)}.`);
+    return ["grdctl", "vnc", "set-auth-method", method];
+}
+
 export function buildSsListeningArgs(): string[] {
     return ["ss", "-tlnH"];
 }
@@ -117,24 +131,6 @@ export function buildChmodArgs(mode: string, path: string): string[] {
 /** chown "user:" sets the group to the user's login group. */
 export function buildChownArgs(user: string, path: string): string[] {
     return ["chown", `${validateUsername(user)}:`, validatePath(path)];
-}
-
-export type PackageManager = "dnf" | "apt" | "zypper";
-
-export function buildInstallPackagesArgs(pm: PackageManager, packages: string[]): string[] {
-    if (packages.length === 0)
-        throw new ValidationError("No packages given.");
-    const validated = packages.map(validatePackageName);
-    switch (pm) {
-    case "dnf":
-        return ["dnf", "install", "-y", ...validated];
-    case "apt":
-        return ["apt-get", "install", "-y", ...validated];
-    case "zypper":
-        return ["zypper", "--non-interactive", "install", ...validated];
-    default:
-        throw new ValidationError(`Unsupported package manager: ${JSON.stringify(pm)}.`);
-    }
 }
 
 export function buildLoginctlListArgs(): string[] {

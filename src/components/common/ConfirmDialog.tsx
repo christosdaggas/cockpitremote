@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Button, Modal, ModalVariant } from "@patternfly/react-core";
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "@patternfly/react-core";
 
 export interface ConfirmDialogProps {
     title: string;
@@ -27,22 +27,27 @@ export function ConfirmDialog({ title, isOpen, confirmLabel, variant = "primary"
 
     return (
         <Modal
-            variant={ModalVariant.small}
-            title={title}
-            titleIconVariant={variant === "danger" ? "warning" : undefined}
+            className="ctr-password-modal"
+            width="35rem"
+            maxWidth="calc(100vw - 2rem)"
+            aria-labelledby="ctr-confirm-dialog-title"
             isOpen={isOpen}
             onClose={busy ? undefined : onClose}
-            actions={[
-                <Button key="confirm" variant={variant} onClick={handleConfirm}
-                        isLoading={busy} isDisabled={busy}>
-                    {confirmLabel}
-                </Button>,
-                <Button key="cancel" variant="link" onClick={onClose} isDisabled={busy}>
-                    Cancel
-                </Button>,
-            ]}
         >
-            {children}
+            <ModalHeader
+                title={title}
+                labelId="ctr-confirm-dialog-title"
+                titleIconVariant={variant === "danger" ? "warning" : undefined}
+            />
+            <ModalBody>{children}</ModalBody>
+            <ModalFooter>
+                <Button variant={variant} onClick={handleConfirm} isLoading={busy} isDisabled={busy}>
+                    {confirmLabel}
+                </Button>
+                <Button variant="link" onClick={onClose} isDisabled={busy}>
+                    Cancel
+                </Button>
+            </ModalFooter>
         </Modal>
     );
 }

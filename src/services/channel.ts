@@ -1,5 +1,5 @@
 /*
- * Builds the WebSocket URL that lets noVNC reach the host-local VNC server
+ * Builds the WebSocket URL that lets the browser reach host-local services
  * through Cockpit's own authenticated transport. This is the exact mechanism
  * cockpit-machines uses for VM consoles: a raw "stream" channel is addressed
  * via /cockpit/channel/<csrf-token>?<base64-encoded JSON options>, so the VNC
@@ -23,7 +23,7 @@ export function channelTransportAvailable(): boolean {
         cockpit.transport.csrf_token.length > 0;
 }
 
-export function buildConsoleUrl(port: number, address = "127.0.0.1"): string {
+export function buildStreamUrl(port: number, address = "127.0.0.1"): string {
     validatePort(port);
     validateAddress(address);
     if (!channelTransportAvailable())
@@ -45,4 +45,8 @@ export function buildConsoleUrl(port: number, address = "127.0.0.1"): string {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const wsPort = window.location.port || (protocol === "wss" ? "443" : "80");
     return `${protocol}://${window.location.hostname}:${wsPort}/${prefix.slice(1)}?${query}`;
+}
+
+export function buildConsoleUrl(port: number, address = "127.0.0.1"): string {
+    return buildStreamUrl(port, address);
 }

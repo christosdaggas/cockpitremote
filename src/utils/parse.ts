@@ -27,8 +27,8 @@ export function parseUnitFiles(text: string): string[] {
 
 /**
  * Parses `ss -tlnH` output. Expected line shape:
- *   LISTEN 0 128 127.0.0.1:5901 0.0.0.0:*
- * IPv6 local addresses look like "[::1]:5901"; wildcards like "*:5901".
+ *   LISTEN 0 128 127.0.0.1:5900 0.0.0.0:*
+ * IPv6 local addresses look like "[::1]:5900"; wildcards like "*:5900".
  */
 export function parseSsListening(text: string): ListeningSocket[] {
     const sockets: ListeningSocket[] = [];
@@ -108,6 +108,12 @@ export function extractVersion(text: string): string | null {
 }
 
 export interface GrdStatus {
+    hasRdp: boolean;
+    rdpEnabled: boolean;
+    rdpPort: number | null;
+    rdpViewOnly: boolean;
+    rdpAuthMethods: string | null;
+    rdpPasswordEmpty: boolean;
     /** False when the installed build was compiled without the VNC backend. */
     hasVnc: boolean;
     vncEnabled: boolean;
@@ -127,6 +133,12 @@ export interface GrdStatus {
  */
 export function parseGrdStatus(text: string): GrdStatus {
     const status: GrdStatus = {
+        hasRdp: false,
+        rdpEnabled: false,
+        rdpPort: null,
+        rdpViewOnly: false,
+        rdpAuthMethods: null,
+        rdpPasswordEmpty: false,
         hasVnc: false,
         vncEnabled: false,
         vncPort: null,
@@ -134,22 +146,42 @@ export function parseGrdStatus(text: string): GrdStatus {
         vncAuthMethod: null,
         vncPasswordEmpty: false,
     };
-    let inVnc = false;
+    let section: "rdp" | "vnc" | null = null;
     for (const line of text.split("\n")) {
         if (/^\S/.test(line)) {
-            inVnc = line.trim() === "VNC:";
-            if (inVnc)
+            const header = line.trim();
+            if (header === "RDP:") {
+                section = "rdp";
+                status.hasRdp = true;
+            } else if (header === "VNC:") {
+                section = "vnc";
                 status.hasVnc = true;
+            } else {
+                section = null;
+            }
             continue;
         }
-        if (!inVnc)
+        if (!section)
             continue;
         const idx = line.indexOf(":");
         if (idx < 0)
             continue;
         const key = line.slice(0, idx).trim();
         const value = line.slice(idx + 1).trim();
-        if (key === "Status")
+        if (section === "rdp") {
+            if (key === "Status")
+                status.rdpEnabled = value === "enabled";
+            else if (key === "Port") {
+                const port = Number(value);
+                if (Number.isInteger(port) && port > 0)
+                    status.rdpPort = port;
+            } else if (key === "View-only")
+                status.rdpViewOnly = value === "yes";
+            else if (key === "Authentication methods")
+                status.rdpAuthMethods = value || null;
+            else if (key === "Password")
+                status.rdpPasswordEmpty = value === "(empty)";
+        } else if (key === "Status")
             status.vncEnabled = value === "enabled";
         else if (key === "Port") {
             const port = Number(value);

@@ -5,7 +5,7 @@ import { isAccessDenied, isCancelled, isNotFound, toUserMessage } from "../src/u
 describe("error classification", () => {
     it("recognizes missing commands", () => {
         expect(isNotFound({ problem: "not-found" })).toBe(true);
-        expect(isNotFound({ exit_status: 127, message: "sh: x11vnc: not found" })).toBe(true);
+        expect(isNotFound({ exit_status: 127, message: "sh: exampled: not found" })).toBe(true);
         expect(isNotFound({ exit_status: 1 })).toBe(false);
     });
 

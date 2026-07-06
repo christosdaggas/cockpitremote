@@ -22,7 +22,7 @@ export function validateUnitName(unit: string): string {
     if (typeof unit !== "string" || !UNIT_NAME_RE.test(unit))
         throw new ValidationError(
             `Invalid systemd unit name: ${JSON.stringify(unit)}. ` +
-            "Expected something like \"vncserver@:1.service\".");
+            "Expected something like \"gnome-remote-desktop.service\".");
     return unit;
 }
 
@@ -134,14 +134,4 @@ export function validatePassword(password: string): PasswordCheck {
             ? "Classic VNC authentication only uses the first 8 characters of the password."
             : null,
     };
-}
-
-/** "vncserver@:1.service" → 1; null when the unit encodes no display. */
-export function displayFromUnit(unit: string): number | null {
-    const m = /@:(\d{1,2})\.service$/.exec(unit);
-    return m ? Number(m[1]) : null;
-}
-
-export function portForDisplay(display: number): number {
-    return 5900 + display;
 }
