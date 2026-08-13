@@ -1,12 +1,18 @@
 import type { ListeningSocket } from "../types";
 import { parseSsListening } from "../utils/parse";
 import { isLoopback } from "../utils/validation";
-import { buildSsListeningArgs } from "./commands";
+import { buildSsListeningArgs, buildSsListeningProcessArgs } from "./commands";
 import { spawn } from "./spawn";
 
 export async function getListeningSockets(): Promise<ListeningSocket[]> {
     const output = await spawn(buildSsListeningArgs(), { superuser: "try" });
     return parseSsListening(output);
+}
+
+export async function getListeningProcessSockets(): Promise<ListeningSocket[]> {
+    // Do not elevate: process names visible to this user distinguish the user's
+    // desktop-sharing daemon from the system-wide GDM Remote Login daemon.
+    return parseSsListening(await spawn(buildSsListeningProcessArgs()));
 }
 
 export interface PortCheck {

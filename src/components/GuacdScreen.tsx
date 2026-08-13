@@ -26,7 +26,14 @@ export function GuacdScreen({ screenRef, containerRef, state, target, protocol =
 
     return (
         <div ref={screenRef} className="ctr-console">
-            <div ref={containerRef} className="ctr-console-canvas" />
+            <div
+                ref={containerRef}
+                className={`ctr-console-canvas${state.kind === "connected" ? " ctr-console-canvas-connected" : ""}`}
+                tabIndex={0}
+                role="application"
+                aria-label={`${endpoint} remote desktop input`}
+                onPointerDownCapture={event => event.currentTarget.focus({ preventScroll: true })}
+            />
             {state.kind !== "connected" && (
                 <div className="ctr-console-overlay">
                     {state.kind === "idle" && (

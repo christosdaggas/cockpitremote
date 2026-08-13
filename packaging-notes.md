@@ -42,9 +42,9 @@ package formats.
 
 - `cockpit` ≥ 266 (RPM: `Requires: cockpit-bridge >= 266`; DEB:
   `Depends: cockpit-bridge (>= 266)`)
-- Recommends (not Requires) GNOME Remote Desktop, guacd, libguac-client-vnc,
-  and libguac-client-rdp. The plugin can load without them and report what is
-  missing, so *Recommends* is correct.
+- `guacd` is required and enabled/started by the package because every browser
+  console connection depends on it. GNOME Remote Desktop and the VNC/RDP guacd
+  protocol plugins remain recommendations so the UI can report missing pieces.
 
 ## Build dependencies
 
@@ -57,7 +57,7 @@ package formats.
 ```spec
 Name:           cockpit-cockpitremote
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        7%{?dist}
 Summary:        Web-based remote desktop for Cockpit
 License:        LGPL-2.1-or-later
 URL:            https://github.com/christosdaggas/cockpitremote
@@ -66,7 +66,7 @@ BuildArch:      noarch
 BuildRequires:  nodejs >= 18, npm, make
 Requires:       cockpit-bridge >= 266
 Recommends:     gnome-remote-desktop
-Recommends:     guacd
+Requires:       guacd
 Recommends:     libguac-client-vnc
 Recommends:     libguac-client-rdp
 
@@ -85,6 +85,9 @@ NODE_ENV=production node build.js
 %install
 make install PREFIX=/usr DESTDIR=%{buildroot}
 
+%post
+systemctl enable --now guacd.service >/dev/null 2>&1 || :
+
 %files
 %license LICENSE
 %doc README.md
@@ -95,7 +98,7 @@ make install PREFIX=/usr DESTDIR=%{buildroot}
 ## DEB outline
 
 - `debian/control`: `Package: cockpit-cockpitremote`, `Architecture: all`,
-  `Depends: cockpit-bridge (>= 266)`, `Recommends: gnome-remote-desktop, guacd, libguac-client-vnc, libguac-client-rdp`,
+  `Depends: cockpit-bridge (>= 266), guacd`, `Recommends: gnome-remote-desktop, libguac-client-vnc, libguac-client-rdp`,
   `Build-Depends: debhelper-compat (= 13), nodejs (>= 18), npm, make`.
 - `debian/rules`: dh defaults with
   `override_dh_auto_build: npm ci && NODE_ENV=production node build.js`
@@ -103,8 +106,8 @@ make install PREFIX=/usr DESTDIR=%{buildroot}
 
 ## Post-install steps
 
-None required. Cockpit discovers packages on login — no daemon reload, no
-systemd unit belongs to this package itself.
+Enable and start `guacd.service` during installation. Cockpit discovers the UI
+package on login; no daemon reload or extension-owned systemd unit is needed.
 
 Configuration created at runtime (not owned by the package, do **not**
 remove on upgrade; consider `%ghost` in RPM):

@@ -13,7 +13,9 @@ import {
     buildLoginctlShowSessionArgs,
     buildMkdirArgs,
     buildSystemctlActionArgs,
+    buildSystemctlEnableNowArgs,
     buildSystemctlShowArgs,
+    buildSsListeningProcessArgs,
     buildVersionArgs,
     buildVncpasswdArgs,
     buildWhichArgs,
@@ -49,6 +51,17 @@ describe("buildSystemctlActionArgs", () => {
     });
 });
 
+describe("buildSystemctlEnableNowArgs", () => {
+    it("enables and starts a required service atomically", () => {
+        expect(buildSystemctlEnableNowArgs("guacd.service"))
+            .toEqual(["systemctl", "enable", "--now", "guacd.service"]);
+    });
+
+    it("validates the unit name", () => {
+        expect(() => buildSystemctlEnableNowArgs("guacd.service; reboot")).toThrow(ValidationError);
+    });
+});
+
 describe("buildSystemctlShowArgs", () => {
     it("asks for a fixed property list", () => {
         expect(buildSystemctlShowArgs("example.service")).toEqual([
@@ -64,6 +77,12 @@ describe("buildSystemctlShowArgs", () => {
             "--property=LoadState,ActiveState,SubState,UnitFileState,ExecMainStatus",
             "--no-pager",
         ]);
+    });
+});
+
+describe("buildSsListeningProcessArgs", () => {
+    it("requests listening TCP sockets with process ownership", () => {
+        expect(buildSsListeningProcessArgs()).toEqual(["ss", "-tlnpH"]);
     });
 });
 
@@ -121,8 +140,13 @@ describe("buildListUnitFilesArgs", () => {
 });
 
 describe("buildGrdctlStatusArgs", () => {
-    it("takes no arguments at all", () => {
+    it("defaults to the calling user's configuration", () => {
         expect(buildGrdctlStatusArgs()).toEqual(["grdctl", "status"]);
+        expect(buildGrdctlStatusArgs("user")).toEqual(["grdctl", "status"]);
+    });
+
+    it("reads the system Remote Login daemon with --system", () => {
+        expect(buildGrdctlStatusArgs("system")).toEqual(["grdctl", "--system", "status"]);
     });
 
     it("builds GNOME Remote Desktop VNC configuration commands without password argv", () => {

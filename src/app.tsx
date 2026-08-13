@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     AlertActionCloseButton,
@@ -10,10 +10,13 @@ import {
     PageSection,
 } from "@patternfly/react-core";
 
-import { backendDef } from "./constants";
+import { backendDef, GUACD_UNIT } from "./constants";
 import { useBackends } from "./hooks/useBackends";
 import { useConfig, usePrefs } from "./hooks/useConfig";
 import { NotifyContext, type NotifyFn, type NotifyVariant } from "./notifications";
+import { ensureSystemServiceStarted } from "./services/systemd";
+import type { UnitScope } from "./types";
+import { toUserMessage } from "./utils/errors";
 import { DashboardTab } from "./components/DashboardTab";
 import { LogsTab } from "./components/LogsTab";
 import { RemoteDesktopTab } from "./components/RemoteDesktopTab";
@@ -42,8 +45,10 @@ export function App() {
     const { config, warning: configWarning, loading: configLoading, save } = useConfig();
     const [prefs, updatePrefs] = usePrefs();
     const backendsData = useBackends();
+    const refreshBackends = backendsData.refresh;
     const [activeTab, setActiveTab] = useState<TabId>("dashboard");
     const [toasts, setToasts] = useState<Toast[]>([]);
+    const guacdStartupAttempted = useRef(false);
 
     const notify = useCallback<NotifyFn>((variant, title, detail) => {
         const key = ++toastCounter;
@@ -53,6 +58,21 @@ export function App() {
     const dismiss = useCallback((key: number) => {
         setToasts(prev => prev.filter(t => t.key !== key));
     }, []);
+
+    useEffect(() => {
+        if (configLoading || guacdStartupAttempted.current)
+            return;
+
+        guacdStartupAttempted.current = true;
+        ensureSystemServiceStarted(GUACD_UNIT).then(installed => {
+            if (!installed)
+                notify("warning", "guacd is not installed", "Install guacd to use the browser remote desktop.");
+            else
+                refreshBackends();
+        }).catch(err => {
+            notify("danger", "Could not start guacd", toUserMessage(err));
+        });
+    }, [configLoading, notify, refreshBackends]);
 
     // The unit the plugin manages: the configured one, or the backend default.
     const activeUnit = useMemo(() => {
@@ -64,7 +84,14 @@ export function App() {
         return detected ?? backendDef(config.backend).defaultUnit;
     }, [config.unit, config.backend, backendsData.backends]);
 
-    const activeScope = config.backend ? backendDef(config.backend).unitScope : "system";
+    // Remote Login is served by the system daemon of the same name, so logs and
+    // service actions must follow the selected mode rather than the backend's
+    // default (user) scope.
+    const activeScope: UnitScope = config.backend
+        ? (backendDef(config.backend).protocol === "rdp" && config.rdpMode === "remote-login"
+            ? "system"
+            : backendDef(config.backend).unitScope)
+        : "system";
     const activeItem = NAV_ITEMS.find(item => item.id === activeTab) ?? NAV_ITEMS[0];
 
     if (configLoading)

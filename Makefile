@@ -34,6 +34,9 @@ install: build
 	cp -r dist/. $(INSTALLDIR)/
 	mkdir -p $(METAINFODIR)
 	cp $(METAINFO) $(METAINFODIR)/
+	@if [ -z "$(DESTDIR)" ] && command -v systemctl >/dev/null 2>&1; then \
+		systemctl enable --now guacd.service; \
+	fi
 
 uninstall:
 	rm -rf $(INSTALLDIR)

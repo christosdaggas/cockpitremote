@@ -85,7 +85,7 @@ export function ConsoleToolbar({
                                 <FormSelect
                                     value={String(prefs.qualityLevel)}
                                     onChange={(_event, value) => updatePrefs({ qualityLevel: Number(value) })}
-                                    aria-label="Image quality"
+                                    aria-label="Image quality, applied on the next connection"
                                     style={{ minWidth: "9rem" }}
                                 >
                                     {LEVELS.map(level => (
@@ -99,7 +99,7 @@ export function ConsoleToolbar({
                                 <FormSelect
                                     value={String(prefs.compressionLevel)}
                                     onChange={(_event, value) => updatePrefs({ compressionLevel: Number(value) })}
-                                    aria-label="Compression level"
+                                    aria-label="Compression level, applied on the next connection"
                                     style={{ minWidth: "10rem" }}
                                 >
                                     {LEVELS.map(level => (

@@ -7,6 +7,7 @@ export const DEFAULT_VNC_PORT = 5900;
 export const DEFAULT_RDP_PORT = 3389;
 export const GUACD_ADDRESS = "localhost";
 export const GUACD_PORT = 4822;
+export const GUACD_UNIT = "guacd.service";
 export const RDP_DPI = 96;
 export const CONNECT_TIMEOUT_MS = 15000;
 

@@ -30,6 +30,10 @@ export function buildSystemctlActionArgs(action: SystemdAction, unit: string, sc
     return [...systemctlBase(scope), action, validateUnitName(unit)];
 }
 
+export function buildSystemctlEnableNowArgs(unit: string): string[] {
+    return ["systemctl", "enable", "--now", validateUnitName(unit)];
+}
+
 export function buildSystemctlShowArgs(unit: string, scope: UnitScope = "system"): string[] {
     return [
         ...systemctlBase(scope), "show", validateUnitName(unit),
@@ -68,9 +72,13 @@ export function buildJournalArgs(unit: string, lines: number, priority?: number 
     return args;
 }
 
-/** grdctl reads the calling user's GNOME Remote Desktop configuration. */
-export function buildGrdctlStatusArgs(): string[] {
-    return ["grdctl", "status"];
+/**
+ * grdctl reads the calling user's GNOME Remote Desktop configuration by
+ * default; "--system" reads the separate system daemon that backs GNOME's
+ * "Remote Login" (headless) sessions.
+ */
+export function buildGrdctlStatusArgs(scope: "user" | "system" = "user"): string[] {
+    return scope === "system" ? ["grdctl", "--system", "status"] : ["grdctl", "status"];
 }
 
 export function buildGrdctlVncEnableArgs(): string[] {
@@ -90,6 +98,11 @@ export function buildGrdctlVncSetAuthMethodArgs(method: "password" | "prompt"): 
 
 export function buildSsListeningArgs(): string[] {
     return ["ss", "-tlnH"];
+}
+
+/** Process ownership identifies a negotiated per-user GNOME RDP port. */
+export function buildSsListeningProcessArgs(): string[] {
+    return ["ss", "-tlnpH"];
 }
 
 export function buildWhichArgs(binary: string): string[] {

@@ -21,6 +21,7 @@ export const DEFAULT_CONFIG: RemoteConfig = {
     unit: "",
     address: "127.0.0.1",
     port: 5900,
+    rdpMode: "screen-share",
     geometry: "1280x800",
     vncUser: "",
 };
@@ -33,6 +34,7 @@ function normalize(raw: unknown): RemoteConfig {
         unit: typeof obj.unit === "string" ? obj.unit : "",
         address: typeof obj.address === "string" ? obj.address : DEFAULT_CONFIG.address,
         port: typeof obj.port === "number" && Number.isInteger(obj.port) ? obj.port : DEFAULT_CONFIG.port,
+        rdpMode: obj.rdpMode === "remote-login" ? "remote-login" : DEFAULT_CONFIG.rdpMode,
         geometry: typeof obj.geometry === "string" ? obj.geometry : DEFAULT_CONFIG.geometry,
         vncUser: typeof obj.vncUser === "string" ? obj.vncUser : "",
     };

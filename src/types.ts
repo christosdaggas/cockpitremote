@@ -1,6 +1,16 @@
 export type BackendId = "grd" | "grd-rdp";
 export type BackendProtocol = "vnc" | "rdp";
 
+/**
+ * Which GNOME Remote Desktop RDP endpoint to connect to. Both daemons can run
+ * at once on different ports:
+ *  - "screen-share"  mirrors the logged-in GNOME session (user daemon). Its
+ *    resolution is fixed by the physical monitor and ignores client resizes.
+ *  - "remote-login"  starts a headless session (system daemon, GNOME's
+ *    "Remote Login"), which adopts the resolution the client asks for.
+ */
+export type GrdRdpMode = "screen-share" | "remote-login";
+
 export type SystemdAction = "start" | "stop" | "restart" | "enable" | "disable";
 
 /**
@@ -41,11 +51,18 @@ export interface BackendInfo {
     defaultPort: number;
     /** Port the backend reports it actually uses (grdctl), when known. */
     detectedPort: number | null;
+    /**
+     * Port the system "Remote Login" daemon listens on, when it is enabled.
+     * Null for VNC and whenever headless RDP is unavailable.
+     */
+    remoteLoginPort: number | null;
 }
 
 export interface ListeningSocket {
     address: string;
     port: number;
+    /** Process names reported by `ss -p`, when visible to the Cockpit user. */
+    processes?: string[];
 }
 
 export interface RemoteConfig {
@@ -53,6 +70,8 @@ export interface RemoteConfig {
     unit: string;
     address: string;
     port: number;
+    /** Which RDP endpoint to use; ignored by the VNC backend. */
+    rdpMode: GrdRdpMode;
     /** Optional geometry hint retained for existing config files. */
     geometry: string;
     /** Optional legacy VNC user retained for existing config files. */

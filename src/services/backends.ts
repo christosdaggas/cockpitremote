@@ -1,6 +1,6 @@
 import { BACKENDS, type BackendDef } from "../constants";
-import type { BackendInfo, SessionInfo } from "../types";
-import { extractVersion, parseGrdStatus, parseUnitFiles } from "../utils/parse";
+import type { BackendInfo, ListeningSocket, SessionInfo } from "../types";
+import { extractVersion, parseGrdStatus, parseUnitFiles, type GrdStatus } from "../utils/parse";
 import {
     buildGrdctlStatusArgs,
     buildListUnitFilesArgs,
@@ -8,6 +8,7 @@ import {
     buildWhichArgs,
 } from "./commands";
 import { probe, spawn } from "./spawn";
+import { getListeningProcessSockets } from "./network";
 import { getServiceStatus } from "./systemd";
 
 /*
@@ -19,9 +20,28 @@ const USER_UNIT_PATTERNS = ["gnome-remote-desktop*"];
 
 export async function detectBackends(session: SessionInfo): Promise<BackendInfo[]> {
     void session;
-    const userUnits = await listUnitFiles(USER_UNIT_PATTERNS, "user");
+    const [userUnits, processSockets] = await Promise.all([
+        listUnitFiles(USER_UNIT_PATTERNS, "user"),
+        getListeningProcessSockets().catch(() => [] as ListeningSocket[]),
+    ]);
     return Promise.all(BACKENDS.map(def =>
-        detectOne(def, userUnits)));
+        detectOne(def, userUnits, processSockets)));
+}
+
+export function resolveGrdRdpPort(grd: GrdStatus, sockets: ListeningSocket[]): number | null {
+    if (!grd.rdpPort || !grd.rdpNegotiatePort)
+        return grd.rdpPort;
+
+    const ports = sockets
+        .filter(socket => socket.port !== grd.vncPort &&
+            socket.processes?.some(process => process.startsWith("gnome-remote")))
+        .map(socket => socket.port)
+        .filter((port, index, all) => all.indexOf(port) === index)
+        .sort((a, b) => a - b);
+
+    return ports.find(port => port === grd.rdpPort) ??
+        ports.find(port => port > grd.rdpPort) ??
+        grd.rdpPort;
 }
 
 async function listUnitFiles(patterns: string[], scope: "system" | "user"): Promise<string[]> {
@@ -44,7 +64,7 @@ async function findBinary(names: string[]): Promise<string | null> {
     return null;
 }
 
-async function detectOne(def: BackendDef, unitFiles: string[]): Promise<BackendInfo> {
+async function detectOne(def: BackendDef, unitFiles: string[], processSockets: ListeningSocket[]): Promise<BackendInfo> {
     const notes: string[] = [];
     const binaryPath = await findBinary(def.binaries);
 
@@ -80,6 +100,7 @@ async function detectOne(def: BackendDef, unitFiles: string[]): Promise<BackendI
 
     let supported = def.manageable;
     let detectedPort: number | null = null;
+    let remoteLoginPort: number | null = null;
     if ((def.id === "grd" || def.id === "grd-rdp") && binaryPath) {
         // stderr must stay out of the parsed stream (err:"message" overrides
         // probe's err:"out"): grdctl mixes GLib warnings into the output.
@@ -96,8 +117,16 @@ async function detectOne(def: BackendDef, unitFiles: string[]): Promise<BackendI
                     supported = false;
                     notes.push("This GNOME Remote Desktop build provides no RDP backend.");
                 } else {
-                    detectedPort = grd.rdpPort;
+                    detectedPort = resolveGrdRdpPort(grd, processSockets);
+                    remoteLoginPort = await detectRemoteLoginPort();
                     notes.push("Runs in the logged-in user's GNOME session and uses the standard RDP protocol.");
+                    if (detectedPort && detectedPort !== grd.rdpPort)
+                        notes.push(`GNOME negotiated port ${detectedPort} because port ${grd.rdpPort} is occupied ` +
+                            "by the system Remote Login service.");
+                    if (remoteLoginPort)
+                        notes.push(`GNOME "Remote Login" is also enabled on port ${remoteLoginPort}. It opens a ` +
+                            "headless session that adopts the browser's resolution, so fullscreen fills the " +
+                            "window exactly — pick it under Settings if you do not need to see the physical screen.");
                     notes.push("The browser console uses local guacd as the RDP gateway.");
                     if (!grd.rdpEnabled)
                         notes.push("RDP is currently disabled. Enable it with GNOME Settings or grdctl.");
@@ -146,5 +175,21 @@ async function detectOne(def: BackendDef, unitFiles: string[]): Promise<BackendI
         notes,
         defaultPort: def.defaultPort,
         detectedPort,
+        remoteLoginPort,
     };
+}
+
+/**
+ * Reads the system daemon behind GNOME's "Remote Login". It is a separate
+ * configuration from the user session's, so it needs its own grdctl call; the
+ * port is only reported when headless RDP is actually enabled, since offering
+ * a disabled endpoint would just fail at connect time.
+ */
+async function detectRemoteLoginPort(): Promise<number | null> {
+    const { ok, output } = await probe(buildGrdctlStatusArgs("system"),
+                                       { err: "message", superuser: "try" });
+    if (!ok || !/^Overall:/m.test(output))
+        return null;
+    const system = parseGrdStatus(output);
+    return system.hasRdp && system.rdpEnabled ? system.rdpPort : null;
 }

@@ -25,6 +25,7 @@ function grdBackend(overrides: Partial<BackendInfo> = {}): BackendInfo {
         notes: [],
         defaultPort: 5900,
         detectedPort: 5900,
+        remoteLoginPort: null,
         ...overrides,
     };
 }

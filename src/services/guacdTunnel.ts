@@ -28,13 +28,29 @@ export interface GuacdConnectionOptions extends GuacdCredentials {
     timezone?: string;
     guacdAddress?: string;
     guacdPort?: number;
+    /** VNC JPEG quality, 0 (worst) to 9 (best). guacd defaults to 6. */
+    qualityLevel?: number;
+    /** VNC zlib compression, 0 (fastest) to 9 (smallest). guacd defaults to 2. */
+    compressionLevel?: number;
+}
+
+/** guacd rejects out-of-range levels, so clamp rather than pass through. */
+function level(value: number | undefined, fallback: number): string {
+    if (!Number.isInteger(value))
+        return String(fallback);
+    return String(Math.min(9, Math.max(0, value as number)));
 }
 
 export function encodeInstruction(...elements: unknown[]): string {
     if (elements.length === 0)
         return "";
     return elements.map(element => {
-        const value = String(element);
+        // guacd reads numeric instruction elements with strtol(), so a boolean
+        // has to go out as 1/0. Stringifying it would send "true", which parses
+        // as 0 and turns every "key" press into a release — silently killing
+        // all keyboard input. Handshake arguments are already strings and are
+        // therefore unaffected.
+        const value = typeof element === "boolean" ? (element ? "1" : "0") : String(element);
         return `${value.length}.${value}`;
     }).join(",") + ";";
 }
@@ -49,8 +65,11 @@ export function buildGuacdConnectArgs(names: string[], options: GuacdConnectionO
         username: options.username,
         password: options.password,
         "read-only": "false",
-        "disable-copy": "true",
-        "disable-paste": "true",
+        // Clipboard sync in both directions. guacd only relays what the client
+        // asks it to, so nothing crosses without the browser sending it — see
+        // the paste handling in useGuacd.
+        "disable-copy": "false",
+        "disable-paste": "false",
         "force-lossless": "false",
     };
     const rdp: Record<string, string> = {
@@ -103,8 +122,8 @@ export function buildGuacdConnectArgs(names: string[], options: GuacdConnectionO
         "recording-include-keys": "false",
         "create-recording-path": "false",
         "recording-write-existing": "false",
-        "compress-level": "2",
-        "quality-level": "6",
+        "compress-level": level(options.compressionLevel, 2),
+        "quality-level": level(options.qualityLevel, 6),
     };
     const values = options.protocol === "vnc" ? vnc : rdp;
     return names.map(name => name.startsWith("VERSION_") ? name : (values[name] ?? ""));

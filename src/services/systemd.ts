@@ -1,6 +1,6 @@
 import type { ServiceStatus, SystemdAction, UnitScope } from "../types";
 import { parseKeyValueOutput } from "../utils/parse";
-import { buildSystemctlActionArgs, buildSystemctlShowArgs } from "./commands";
+import { buildSystemctlActionArgs, buildSystemctlEnableNowArgs, buildSystemctlShowArgs } from "./commands";
 import { spawn } from "./spawn";
 
 /*
@@ -30,4 +30,16 @@ export async function getServiceStatus(unit: string, scope: UnitScope = "system"
 export async function serviceAction(action: SystemdAction, unit: string, scope: UnitScope = "system"): Promise<void> {
     await spawn(buildSystemctlActionArgs(action, unit, scope),
                 scope === "system" ? { superuser: "require" } : {});
+}
+
+/** Enables and starts a required system service in one systemd transaction. */
+export async function ensureSystemServiceStarted(unit: string): Promise<boolean> {
+    const status = await getServiceStatus(unit);
+    if (!status.exists)
+        return false;
+    if (status.activeState === "active" && status.unitFileState === "enabled")
+        return true;
+
+    await spawn(buildSystemctlEnableNowArgs(unit), { superuser: "require" });
+    return true;
 }

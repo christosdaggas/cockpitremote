@@ -31,16 +31,38 @@ declare module "guacamole-common-js" {
         scale(scale: number): void;
     }
 
+    export interface GuacamoleInputStream {
+        index: number;
+        sendAck(message: string, code: number): void;
+    }
+
+    export interface GuacamoleOutputStream {
+        index: number;
+    }
+
+    export interface GuacamoleStringReader {
+        ontext: ((text: string) => void) | null;
+        onend: (() => void) | null;
+    }
+
+    export interface GuacamoleStringWriter {
+        sendText(text: string): void;
+        sendEnd(): void;
+    }
+
     export interface GuacamoleClient {
         onstatechange: ((state: number) => void) | null;
         onerror: ((status: GuacamoleStatus) => void) | null;
         onsync: ((timestamp: number, frames?: number) => void) | null;
+        onclipboard: ((stream: GuacamoleInputStream, mimetype: string) => void) | null;
         connect(data?: string): void;
         disconnect(): void;
         getDisplay(): GuacamoleDisplay;
         sendSize(width: number, height: number): void;
-        sendKeyEvent(pressed: boolean, keysym: number): void;
+        /** `pressed` is written to the wire verbatim; guacd expects 1 or 0. */
+        sendKeyEvent(pressed: 0 | 1, keysym: number): void;
         sendMouseState(mouseState: GuacamoleMouseState, applyDisplayScale?: boolean): void;
+        createClipboardStream(mimetype: string): GuacamoleOutputStream;
     }
 
     export interface GuacamoleMouseState {
@@ -62,9 +84,19 @@ declare module "guacamole-common-js" {
         onEach(types: string[], listener: (event: GuacamoleMouseEvent) => void): void;
     }
 
+    export interface GuacamoleKeyboardModifiers {
+        shift: boolean;
+        ctrl: boolean;
+        alt: boolean;
+        meta: boolean;
+        hyper: boolean;
+    }
+
     export interface GuacamoleKeyboard {
         onkeydown: ((keysym: number) => boolean) | null;
         onkeyup: ((keysym: number) => void) | null;
+        /** Resynced before each onkeydown/onkeyup call. */
+        readonly modifiers: GuacamoleKeyboardModifiers;
         reset(): void;
     }
 
@@ -109,6 +141,8 @@ declare module "guacamole-common-js" {
         Parser: { new(): GuacamoleParser };
         Keyboard: { new(element?: Element | Document): GuacamoleKeyboard };
         Mouse: { new(element: Element): GuacamoleMouse };
+        StringReader: { new(stream: GuacamoleInputStream): GuacamoleStringReader };
+        StringWriter: { new(stream: GuacamoleOutputStream): GuacamoleStringWriter };
     };
 
     export default Guacamole;

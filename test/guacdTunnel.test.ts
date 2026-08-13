@@ -21,6 +21,17 @@ describe("guacd tunnel helpers", () => {
         expect(encodeInstruction("connect", "a,b;c")).toBe("7.connect,5.a,b;c;");
     });
 
+    // guacd parses the "pressed" flag with strtol(); "true"/"false" both read
+    // as 0, which would turn every key press into a release.
+    it("encodes booleans as 1/0 rather than \"true\"/\"false\"", () => {
+        expect(encodeInstruction("key", 65, true)).toBe("3.key,2.65,1.1;");
+        expect(encodeInstruction("key", 65, false)).toBe("3.key,2.65,1.0;");
+    });
+
+    it("leaves string connect arguments untouched", () => {
+        expect(encodeInstruction("connect", "true", "false")).toBe("7.connect,4.true,5.false;");
+    });
+
     it("maps guacd RDP argument names to connection values", () => {
         expect(buildGuacdConnectArgs([
             "VERSION_1_5_0",
@@ -77,5 +88,25 @@ describe("guacd tunnel helpers", () => {
             "local",
             "",
         ]);
+    });
+
+    it("passes VNC quality and compression levels through, clamped", () => {
+        const vnc = { ...options, protocol: "vnc" as const };
+        const names = ["quality-level", "compress-level"];
+        expect(buildGuacdConnectArgs(names, vnc)).toEqual(["6", "2"]);
+        expect(buildGuacdConnectArgs(names, { ...vnc, qualityLevel: 9, compressionLevel: 0 }))
+                .toEqual(["9", "0"]);
+        // Out-of-range and non-integer values must not reach guacd.
+        expect(buildGuacdConnectArgs(names, { ...vnc, qualityLevel: 42, compressionLevel: -3 }))
+                .toEqual(["9", "0"]);
+        expect(buildGuacdConnectArgs(names, { ...vnc, qualityLevel: 1.5, compressionLevel: NaN }))
+                .toEqual(["6", "2"]);
+    });
+
+    it("leaves the guacd clipboard enabled in both directions", () => {
+        for (const protocol of ["rdp", "vnc"] as const) {
+            expect(buildGuacdConnectArgs(["disable-copy", "disable-paste"], { ...options, protocol }))
+                    .toEqual(["false", "false"]);
+        }
     });
 });

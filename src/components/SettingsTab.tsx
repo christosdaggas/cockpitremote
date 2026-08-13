@@ -18,7 +18,7 @@ import {
 
 import { BACKENDS, DEFAULT_RDP_PORT, backendDef } from "../constants";
 import { useNotify } from "../notifications";
-import type { BackendId, BackendInfo, RemoteConfig } from "../types";
+import type { BackendId, BackendInfo, GrdRdpMode, RemoteConfig } from "../types";
 import { toUserMessage } from "../utils/errors";
 import {
     ValidationError,
@@ -45,6 +45,7 @@ interface FormState {
     unit: string;
     address: string;
     port: string;
+    rdpMode: GrdRdpMode;
     geometry: string;
     vncUser: string;
 }
@@ -57,9 +58,15 @@ function fromConfig(config: RemoteConfig): FormState {
         unit: config.unit,
         address: config.address,
         port: String(config.port),
+        rdpMode: config.rdpMode,
         geometry: config.geometry,
         vncUser: config.vncUser,
     };
+}
+
+/** The port a given RDP mode actually listens on, when detection found it. */
+function portForMode(info: BackendInfo | undefined, mode: GrdRdpMode): number | null {
+    return (mode === "remote-login" ? info?.remoteLoginPort : info?.detectedPort) ?? null;
 }
 
 function validateForm(form: FormState): { errors: Errors; config?: RemoteConfig } {
@@ -93,6 +100,7 @@ function validateForm(form: FormState): { errors: Errors; config?: RemoteConfig 
             unit: form.unit,
             address: form.address,
             port,
+            rdpMode: form.rdpMode,
             geometry: form.geometry,
             vncUser: form.vncUser,
         },
@@ -130,14 +138,24 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
             const unit = prev.unit && prev.unit.startsWith(def.unitPrefix)
                 ? prev.unit
                 : (info?.detectedUnit ?? def.defaultUnit);
+            const mode = def.protocol === "rdp" ? prev.rdpMode : "screen-share";
             return {
                 ...prev,
                 backend: value,
                 unit,
-                port: String(info?.detectedPort ?? def.defaultPort),
+                port: String(portForMode(info, mode) ?? def.defaultPort),
             };
         });
         setErrors({});
+    };
+
+    const onModeChange = (value: string) => {
+        const mode: GrdRdpMode = value === "remote-login" ? "remote-login" : "screen-share";
+        setForm(prev => {
+            const detected = portForMode(backends?.find(b => b.id === prev.backend), mode);
+            return { ...prev, rdpMode: mode, port: detected ? String(detected) : prev.port };
+        });
+        setErrors(prev => ({ ...prev, port: undefined }));
     };
 
     const submit = async () => {
@@ -160,6 +178,7 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
 
     const selectedDef = form.backend ? backendDef(form.backend as BackendId) : null;
     const canManagePassword = selectedDef?.supportsPasswordTool === true;
+    const remoteLoginPort = backends?.find(b => b.id === form.backend)?.remoteLoginPort ?? null;
     const portNum = Number(form.port);
     const portAdvice = !errors.port && Number.isInteger(portNum)
         ? (selectedDef?.protocol === "rdp" && portNum !== DEFAULT_RDP_PORT
@@ -211,6 +230,31 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
                             </FormHelperText>
                         )}
                     </FormGroup>
+
+                    {selectedDef?.protocol === "rdp" && (
+                        <FormGroup label="RDP session" fieldId="ctr-rdp-mode">
+                            <FormSelect id="ctr-rdp-mode" value={form.rdpMode}
+                                        onChange={(_event, value) => onModeChange(value)}
+                                        aria-label="RDP session">
+                                <FormSelectOption value="screen-share"
+                                                  label="Screen sharing — mirror the logged-in desktop" />
+                                <FormSelectOption value="remote-login"
+                                                  label={remoteLoginPort
+                                                      ? `Remote Login — headless session (port ${remoteLoginPort})`
+                                                      : "Remote Login — headless session (not enabled on this host)"}
+                                                  isDisabled={!remoteLoginPort} />
+                            </FormSelect>
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem>
+                                        {form.rdpMode === "remote-login"
+                                            ? "A headless session adopts the resolution the browser asks for, so fullscreen fills the window exactly. You will not see what is on the physical screen."
+                                            : "Mirrors the physical monitor at its own fixed resolution, so fullscreen can letterbox when the aspect ratios differ."}
+                                    </HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
+                        </FormGroup>
+                    )}
 
                     <FormGroup label="systemd unit" fieldId="ctr-unit">
                         <TextInput id="ctr-unit" value={form.unit}

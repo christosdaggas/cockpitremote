@@ -46,7 +46,8 @@ export function parseSsListening(text: string): ListeningSocket[] {
         let address = local.slice(0, idx);
         if (address.startsWith("[") && address.endsWith("]"))
             address = address.slice(1, -1);
-        sockets.push({ address, port });
+        const processes = [...line.matchAll(/\(\("([^"]+)"/g)].map(match => match[1]);
+        sockets.push(processes.length > 0 ? { address, port, processes } : { address, port });
     }
     return sockets;
 }
@@ -111,6 +112,7 @@ export interface GrdStatus {
     hasRdp: boolean;
     rdpEnabled: boolean;
     rdpPort: number | null;
+    rdpNegotiatePort: boolean;
     rdpViewOnly: boolean;
     rdpAuthMethods: string | null;
     rdpPasswordEmpty: boolean;
@@ -136,6 +138,7 @@ export function parseGrdStatus(text: string): GrdStatus {
         hasRdp: false,
         rdpEnabled: false,
         rdpPort: null,
+        rdpNegotiatePort: false,
         rdpViewOnly: false,
         rdpAuthMethods: null,
         rdpPasswordEmpty: false,
@@ -177,6 +180,8 @@ export function parseGrdStatus(text: string): GrdStatus {
                     status.rdpPort = port;
             } else if (key === "View-only")
                 status.rdpViewOnly = value === "yes";
+            else if (key === "Negotiate port")
+                status.rdpNegotiatePort = value === "yes";
             else if (key === "Authentication methods")
                 status.rdpAuthMethods = value || null;
             else if (key === "Password")

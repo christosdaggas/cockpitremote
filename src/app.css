@@ -92,26 +92,43 @@ body {
     height: 70vh;
     min-height: 400px;
     overflow: auto;
+    outline: none;
+    /* Centre the scaled remote display so leftover space is split evenly
+       instead of collecting below it. "safe" keeps the top-left reachable by
+       scrolling when the display is bigger than the viewport, which happens
+       with "Scale to fit" switched off; browsers without it keep plain
+       centring from the preceding declarations. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-items: safe center;
+    justify-content: safe center;
+}
+
+.ctr-console-canvas-connected,
+.ctr-console-canvas-connected * {
+    cursor: none !important;
 }
 
 .ctr-guac-display {
     transform-origin: 0 0;
     outline: none;
+    /* Guacamole sizes this box to the scaled display; as a flex item it must
+       not be shrunk, or the image overflows it once "Scale to fit" is off. */
+    flex: none;
 }
 
-.ctr-guac-display:focus-visible {
-    outline: 2px solid var(--pf-t--global--border--color--brand--default, #0066cc);
-    outline-offset: -2px;
-}
-
+/* The plugin runs inside Cockpit's iframe, where vh units resolve against the
+   iframe viewport rather than the screen. Letting the canvas flex into whatever
+   height the fullscreen element actually has keeps it edge to edge. */
 .ctr-console:fullscreen {
-    width: 100vw;
-    height: 100vh;
     border-radius: 0;
+    display: flex;
 }
 
 .ctr-console:fullscreen .ctr-console-canvas {
-    height: 100vh;
+    flex: 1;
+    height: auto;
     min-height: 0;
 }
 

@@ -52,7 +52,8 @@ Tested target platforms (Cockpit ≥ 266, i.e. any 2022+ release):
 
 - Cockpit ≥ 266 on the host
 - GNOME Remote Desktop with VNC or RDP enabled
-- `guacd`, `libguac-client-vnc`, and `libguac-client-rdp` on the host
+- `guacd`, `libguac-client-vnc`, and `libguac-client-rdp` on the host. The
+  extension enables and starts `guacd.service` automatically.
 - Administrative access in Cockpit for service control, config saving and
   password management (reads work without it)
 
@@ -206,13 +207,18 @@ port `4822`. The browser-side Guacamole client performs the `guacd` handshake;
 ## Known limitations
 
 - Browser console support depends on local `guacd` with VNC/RDP protocol plugins installed.
+- Pasting into the remote desktop uses the browser's own paste event, so it works
+  through `Ctrl+V`/`Cmd+V` in the console but not through the browser's Edit menu.
+- Copying *out* of the remote desktop depends on `navigator.clipboard.writeText()`,
+  which Firefox only permits during a user gesture; the copy is silently dropped
+  when the browser refuses it.
 - Managing user-scoped systemd units (`systemctl --user`) is not supported.
 - No automated end-to-end console tests; covered by the manual checklist.
 - English only (no i18n yet).
 
 ## Future improvements
 
-- Clipboard sharing UI in the console toolbar
+- Clipboard sharing UI in the console toolbar (sync itself is already wired up)
 - PatternFly 6 migration to match the newest Cockpit shell styling
 - RPM/DEB packaging in CI (see `packaging-notes.md`)
 - i18n via cockpit's gettext support

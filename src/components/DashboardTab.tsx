@@ -53,9 +53,13 @@ export function DashboardTab({ data, config, activeUnit, saveConfig }: Dashboard
         }
     };
 
+    const selectedBackend = backends?.find(backend => backend.id === config.backend);
+    const healthConfig = selectedBackend?.detectedPort
+        ? { ...config, port: selectedBackend.detectedPort }
+        : config;
     const checks = computeHealthChecks({
         transportAvailable: channelTransportAvailable(),
-        config,
+        config: healthConfig,
         activeUnit,
         backends: backends ?? [],
         session,

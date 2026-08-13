@@ -20,6 +20,7 @@ import type { BackendInfo, RemoteConfig, UiPrefs } from "../types";
 import { ConsoleToolbar } from "./ConsoleToolbar";
 import { GuacdCredentialsModal } from "./GuacdCredentialsModal";
 import { GuacdScreen } from "./GuacdScreen";
+import { Loading } from "./common/Loading";
 
 export interface RemoteDesktopTabProps {
     config: RemoteConfig;
@@ -47,10 +48,18 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
         );
     }
 
-    const def = backendDef(config.backend);
-    const target = `${config.address}:${config.port}`;
+    if (backends === null)
+        return <Loading text="Resolving the GNOME desktop-sharing endpoint…" />;
 
-    const info = backends?.find(b => b.id === config.backend);
+    const def = backendDef(config.backend);
+    const info = backends.find(b => b.id === config.backend);
+    // Both GNOME RDP daemons can listen at once, so the endpoint follows the
+    // configured mode rather than whichever one detection happened to find.
+    const detected = def.protocol === "rdp" && config.rdpMode === "remote-login"
+        ? info?.remoteLoginPort
+        : info?.detectedPort;
+    const port = detected ?? config.port;
+    const target = `${config.address}:${port}`;
     if (!def.manageable || info?.supported === false) {
         return (
             <Alert variant="info" isInline title={`${def.label} cannot be used for the console`}>
@@ -59,7 +68,19 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
         );
     }
 
-    return <GuacdConsole config={config} prefs={prefs} updatePrefs={updatePrefs} target={target}
+    // Connecting to the screen-sharing port while "Remote Login" is selected
+    // would silently land in the wrong session, so say so instead.
+    if (def.protocol === "rdp" && config.rdpMode === "remote-login" && !info?.remoteLoginPort) {
+        return (
+            <Alert variant="warning" isInline title="Remote Login is not enabled on this host">
+                Settings selects GNOME&apos;s headless Remote Login, but the system
+                gnome-remote-desktop daemon reports no enabled RDP endpoint. Enable it in
+                GNOME Settings under Remote Desktop, or switch back to screen sharing in Settings.
+            </Alert>
+        );
+    }
+
+    return <GuacdConsole config={{ ...config, port }} prefs={prefs} updatePrefs={updatePrefs} target={target}
                          protocol={def.protocol} />;
 }
 
@@ -90,6 +111,10 @@ function GuacdConsole({
         });
     }, []);
 
+    // guacd's quality and compression levels are VNC-only parameters; the RDP
+    // client has no equivalent, so the controls would be inert there.
+    const showEncodingPrefs = protocol === "vnc";
+
     return (
         <Card className="ctr-console-card">
             <CardTitle>Console</CardTitle>
@@ -104,7 +129,7 @@ function GuacdConsole({
                             onDisconnect={guacd.disconnect}
                             onCtrlAltDel={guacd.sendCtrlAltDel}
                             onFullscreen={fullscreen}
-                            showEncodingPrefs={false}
+                            showEncodingPrefs={showEncodingPrefs}
                         />
                     </StackItem>
                     <StackItem>

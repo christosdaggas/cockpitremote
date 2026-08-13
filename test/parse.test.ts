@@ -68,6 +68,7 @@ describe("parseSsListening", () => {
             "LISTEN 0      5          [::1]:5900              [::]:*",
             "LISTEN 0      511                *:80                *:*",
             "LISTEN 0      4096       0.0.0.0:9090         0.0.0.0:*",
+            'LISTEN 0      5                  *:3390              *:* users:(("gnome-remote-de",pid=26361,fd=18))',
             "",
         ].join("\n");
         expect(parseSsListening(fixture)).toEqual([
@@ -75,6 +76,7 @@ describe("parseSsListening", () => {
             { address: "::1", port: 5900 },
             { address: "*", port: 80 },
             { address: "0.0.0.0", port: 9090 },
+            { address: "*", port: 3390, processes: ["gnome-remote-de"] },
         ]);
     });
 
@@ -145,6 +147,7 @@ describe("parseGrdStatus", () => {
         "\tAuthentication methods: credentials",
         "\tTLS certificate: /home/alice/.local/share/gnome-remote-desktop/certificates/rdp-tls.crt",
         "\tView-only: no",
+        "\tNegotiate port: yes",
         "\tUsername: (hidden)",
         "\tPassword: (hidden)",
         "VNC:",
@@ -162,6 +165,7 @@ describe("parseGrdStatus", () => {
             hasRdp: true,
             rdpEnabled: true,
             rdpPort: 3389,
+            rdpNegotiatePort: true,
             rdpViewOnly: false,
             rdpAuthMethods: "credentials",
             rdpPasswordEmpty: false,
@@ -184,6 +188,7 @@ describe("parseGrdStatus", () => {
             hasRdp: true,
             rdpEnabled: true,
             rdpPort: 3389,
+            rdpNegotiatePort: true,
             rdpViewOnly: false,
             rdpAuthMethods: "credentials",
             rdpPasswordEmpty: false,
@@ -202,6 +207,41 @@ describe("parseGrdStatus", () => {
             hasRdp: true,
             rdpEnabled: true,
             rdpPort: 3389,
+            rdpNegotiatePort: true,
+            rdpViewOnly: false,
+            rdpAuthMethods: "credentials",
+            rdpPasswordEmpty: false,
+            hasVnc: false,
+            vncEnabled: false,
+            vncPort: null,
+            vncViewOnly: false,
+            vncAuthMethod: null,
+            vncPasswordEmpty: false,
+        });
+    });
+
+    it("parses the system Remote Login daemon's status", () => {
+        // "grdctl --system status" omits the VNC section and the port
+        // negotiation field entirely, so the headless port is taken as-is.
+        const system = [
+            "Overall:",
+            "\tUnit status: active",
+            "RDP:",
+            "\tStatus: enabled",
+            "\tPort: 3389",
+            "\tAuthentication methods: credentials",
+            "\tTLS certificate: /var/lib/gnome-remote-desktop/rdp-tls.crt",
+            "\tTLS key: /var/lib/gnome-remote-desktop/rdp-tls.key",
+            "\tKerberos keytab: (null)",
+            "\tUsername: (hidden)",
+            "\tPassword: (hidden)",
+            "",
+        ].join("\n");
+        expect(parseGrdStatus(system)).toEqual({
+            hasRdp: true,
+            rdpEnabled: true,
+            rdpPort: 3389,
+            rdpNegotiatePort: false,
             rdpViewOnly: false,
             rdpAuthMethods: "credentials",
             rdpPasswordEmpty: false,
@@ -222,6 +262,7 @@ describe("parseGrdStatus", () => {
             hasRdp: true,
             rdpEnabled: true,
             rdpPort: 3389,
+            rdpNegotiatePort: true,
             rdpViewOnly: false,
             rdpAuthMethods: "credentials",
             rdpPasswordEmpty: false,
