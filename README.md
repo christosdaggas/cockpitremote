@@ -1,5 +1,8 @@
 # cockpitremote — Remote Desktop for Cockpit
 
+<img width="100%" height="auto" alt="image" src="https://github.com/user-attachments/assets/59061614-5056-44b8-a332-cc57a17d3b58" />
+
+
 A [Cockpit](https://cockpit-project.org/) application that gives you a **fully
 web-based remote desktop to the host machine**. Open Cockpit
 (`https://your-server:9090`), click **Remote Desktop** under *Tools*, and view
