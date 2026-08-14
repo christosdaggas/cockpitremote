@@ -5,10 +5,23 @@
   "private": true,
   "type": "module",
   "license": "LGPL-2.1-or-later",
+  "author": "Christos A. Daggas",
+  "homepage": "https://github.com/christosdaggas/cockpitremote#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/christosdaggas/cockpitremote"
   },
+  "bugs": {
+    "url": "https://github.com/christosdaggas/cockpitremote/issues"
+  },
+  "keywords": [
+    "cockpit",
+    "remote-desktop",
+    "vnc",
+    "rdp",
+    "guacamole",
+    "gnome"
+  ],
   "scripts": {
     "build": "NODE_ENV=production node build.js",
     "watch": "node build.js --watch",

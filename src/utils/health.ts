@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Pure computation of the dashboard health checks from already-gathered
  * system facts — kept free of I/O so it is trivially unit-testable.

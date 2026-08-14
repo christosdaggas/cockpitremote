@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Christos A. Daggas
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 # Makefile for the cockpitremote Cockpit package.
 #
 #   make            build production bundle into dist/

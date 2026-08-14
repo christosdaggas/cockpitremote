@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";

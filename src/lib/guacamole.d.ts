@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 // Minimal type declarations for guacamole-common-js 1.5.x (ships no TypeScript types).
 declare module "guacamole-common-js" {
     export interface GuacamoleStatus {

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Typed access to the cockpit.js API. cockpit.js is provided at runtime by the
  * Cockpit shell (loaded from ../base1/cockpit.js in index.html) and is never

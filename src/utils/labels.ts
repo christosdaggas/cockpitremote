@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * systemd's own vocabulary, rendered for reading. Kept out of the components so
  * the health checks — which are pure and unit-tested — can use it too.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import type { ServiceStatus, SystemdAction, UnitScope } from "../types";
 import { parseKeyValueOutput } from "../utils/parse";
 import { buildSystemctlActionArgs, buildSystemctlEnableNowArgs, buildSystemctlShowArgs } from "./commands";

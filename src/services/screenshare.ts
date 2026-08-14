@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * GNOME Remote Desktop's VNC screen-share mode. grdctl has no subcommand for
  * it, so it is read and written through GSettings — as the Cockpit user, the

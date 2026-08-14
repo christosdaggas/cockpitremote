@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Thin helpers around cockpit.spawn(). All spawns force LC_ALL=C so parsers
  * see stable, locale-independent output.

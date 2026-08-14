@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * The ONLY place where command argument arrays are assembled. Every builder
  * validates its inputs (utils/validation.ts) and returns a plain argv array —

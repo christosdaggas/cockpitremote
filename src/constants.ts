@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import { N_ } from "./i18n";
 import type { BackendId, BackendProtocol, UiPrefs, UnitScope } from "./types";
 

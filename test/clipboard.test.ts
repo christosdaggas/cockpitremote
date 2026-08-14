@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import { describe, expect, it } from "vitest";
 
 import { createClipboardCollector } from "../src/hooks/useGuacd";

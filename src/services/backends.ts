@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import { BACKENDS, type BackendDef } from "../constants";
 import { _, format } from "../i18n";
 import type { BackendInfo, GrdVncScreenShareMode, ListeningSocket, SessionInfo } from "../types";

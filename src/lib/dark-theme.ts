@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Keeps PatternFly's dark-theme class on <html> in sync with the Cockpit
  * shell's appearance setting, like cockpit's own pkg/lib/cockpit-dark-theme.js:

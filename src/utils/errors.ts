@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Maps cockpit.js failures (channel "problem" codes, spawn exit statuses) to
  * actionable user-facing messages. See

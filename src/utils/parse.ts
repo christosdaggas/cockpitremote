@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Pure parsers for machine-readable command output. Each one is fed the
  * verbatim stdout of a command built in services/commands.ts and is tested

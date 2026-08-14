@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * All user-supplied values are validated here before they can reach a command
  * builder. Policy: reject invalid input outright — never rewrite/sanitize it.

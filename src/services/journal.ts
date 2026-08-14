@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 import type { UnitScope } from "../types";
 import { buildJournalArgs } from "./commands";
 import { spawn } from "./spawn";

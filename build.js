@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 // esbuild driver for the cockpitremote Cockpit package.
 // Produces dist/ = the installable Cockpit package (index.html, manifest.json,
 // index.js, index.css). cockpit.js is NOT bundled — Cockpit's shell provides it

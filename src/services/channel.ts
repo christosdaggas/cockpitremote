@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Christos A. Daggas
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
 /*
  * Builds the WebSocket URL that lets the browser reach host-local services
  * through Cockpit's own authenticated transport. This is the exact mechanism

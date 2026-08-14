@@ -321,10 +321,35 @@ back to English.
 
 ## Roadmap
 
-- Screenshots in the docs
 - Optional reduced-resolution rendering for slow links
 - RPM/DEB packaging in CI
 
 ## License
 
-LGPL-2.1-or-later, matching the Cockpit ecosystem. See [`LICENSE`](LICENSE).
+Copyright © 2026 Christos A. Daggas.
+
+Released under the **GNU Lesser General Public License, version 2.1 or any
+later version** (`LGPL-2.1-or-later`) — the same license as Cockpit itself. The
+full text is in [`LICENSE`](LICENSE), and every source file carries an
+[SPDX](https://spdx.dev/) identifier saying so.
+
+You are free to use, study, share and modify this plugin, including
+commercially. If you distribute a modified version, that version has to stay
+under the same license and its source has to be available. There is no
+warranty of any kind.
+
+### Third-party code
+
+The build bundles other people's work into `index.js`, all of it under
+permissive licenses that impose nothing on yours:
+
+| Component | License |
+| --- | --- |
+| [React](https://react.dev/) | MIT |
+| [PatternFly](https://www.patternfly.org/) | MIT |
+| [guacamole-common-js](https://guacamole.apache.org/) | Apache-2.0 |
+
+Their notices are collected at build time into `index.js.LEGAL.txt`, which
+ships beside the bundle in the package, so the attribution travels with the
+binary. Cockpit's own `cockpit.js` is **not** bundled — the shell provides it at
+runtime — so nothing here links against LGPL code at build time.
