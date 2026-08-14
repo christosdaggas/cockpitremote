@@ -4,3 +4,7 @@ dist/
 public/rpmbuild/
 *.log
 .DS_Store
+
+# Security review notes: they point at unfixed issues by file and line, which
+# is not something to publish in a public repository.
+SECURITY_FINDINGS.md
