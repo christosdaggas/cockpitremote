@@ -145,6 +145,21 @@ body {
     min-height: 0;
 }
 
+/* Clipboard popover */
+.ctr-clipboard-panel {
+    width: min(32rem, calc(100vw - 4rem));
+}
+
+.ctr-clipboard-label {
+    display: block;
+    margin-block-end: var(--pf-t--global--spacer--xs, 0.25rem);
+    font-weight: var(--pf-t--global--font--weight--body--bold, 700);
+}
+
+.ctr-clipboard-action {
+    margin-block-start: var(--pf-t--global--spacer--sm, 0.5rem);
+}
+
 .ctr-console-overlay {
     position: absolute;
     inset: 0;

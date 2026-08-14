@@ -1,6 +1,6 @@
 Name:           cockpit-cockpitremote
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Web-based remote desktop for Cockpit
 License:        LGPL-2.1-or-later
 URL:            https://github.com/christosdaggas/cockpitremote
@@ -40,6 +40,14 @@ systemctl enable --now guacd.service >/dev/null 2>&1 || :
 /usr/share/metainfo/io.github.christosdaggas.cockpitremote.metainfo.xml
 
 %changelog
+* Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-11
+- Add a Clipboard button to the console toolbar: it shows the last selection
+  copied on the remote desktop behind a Copy button, which is the only way the
+  copy can succeed in Firefox, and sends text the other way without needing a
+  paste shortcut
+- Translate the interface into Greek, German, Italian, French and Portuguese
+  through Cockpit's gettext, served per browser language beside the bundle
+
 * Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-10
 - Count Guacamole instruction lengths in Unicode code points instead of UTF-16
   units, so a character outside the basic plane can no longer desynchronise the

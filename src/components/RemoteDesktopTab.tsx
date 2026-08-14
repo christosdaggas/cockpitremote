@@ -15,6 +15,7 @@ import {
 import { CogIcon } from "@patternfly/react-icons";
 
 import { backendDef } from "../constants";
+import { _, format } from "../i18n";
 import { useGuacd } from "../hooks/useGuacd";
 import type { BackendInfo, RemoteConfig, UiPrefs } from "../types";
 import { ConsoleToolbar } from "./ConsoleToolbar";
@@ -34,14 +35,13 @@ export interface RemoteDesktopTabProps {
 export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToDashboard }: RemoteDesktopTabProps) {
     if (!config.backend) {
         return (
-            <EmptyState titleText="No remote desktop backend selected" headingLevel="h2" icon={CogIcon}>
+            <EmptyState titleText={_("No remote desktop backend selected")} headingLevel="h2" icon={CogIcon}>
                 <EmptyStateBody>
-                    Pick a backend on the Dashboard (or configure one in Settings) before
-                    connecting to the host&apos;s desktop.
+                    {_("Pick a backend on the Dashboard (or configure one in Settings) before connecting to the host's desktop.")}
                 </EmptyStateBody>
                 <EmptyStateFooter>
                     <EmptyStateActions>
-                        <Button variant="primary" onClick={onGoToDashboard}>Go to Dashboard</Button>
+                        <Button variant="primary" onClick={onGoToDashboard}>{_("Go to Dashboard")}</Button>
                     </EmptyStateActions>
                 </EmptyStateFooter>
             </EmptyState>
@@ -49,7 +49,7 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
     }
 
     if (backends === null)
-        return <Loading text="Resolving the GNOME desktop-sharing endpoint…" />;
+        return <Loading text={_("Resolving the GNOME desktop-sharing endpoint…")} />;
 
     const def = backendDef(config.backend);
     const info = backends.find(b => b.id === config.backend);
@@ -62,7 +62,7 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
     const target = `${config.address}:${port}`;
     if (!def.manageable || info?.supported === false) {
         return (
-            <Alert variant="info" isInline title={`${def.label} cannot be used for the console`}>
+            <Alert variant="info" isInline title={format(_("$0 cannot be used for the console"), def.label)}>
                 {info?.notes.length ? info.notes.join(" ") : def.description}
             </Alert>
         );
@@ -72,10 +72,8 @@ export function RemoteDesktopTab({ config, backends, prefs, updatePrefs, onGoToD
     // would silently land in the wrong session, so say so instead.
     if (def.protocol === "rdp" && config.rdpMode === "remote-login" && !info?.remoteLoginPort) {
         return (
-            <Alert variant="warning" isInline title="Remote Login is not enabled on this host">
-                Settings selects GNOME&apos;s headless Remote Login, but the system
-                gnome-remote-desktop daemon reports no enabled RDP endpoint. Enable it in
-                GNOME Settings under Remote Desktop, or switch back to screen sharing in Settings.
+            <Alert variant="warning" isInline title={_("Remote Login is not enabled on this host")}>
+                {_("Settings selects GNOME's headless Remote Login, but the system gnome-remote-desktop daemon reports no enabled RDP endpoint. Enable it in GNOME Settings under Remote Desktop, or switch back to screen sharing in Settings.")}
             </Alert>
         );
     }
@@ -117,7 +115,7 @@ function GuacdConsole({
 
     return (
         <Card className="ctr-console-card">
-            <CardTitle>Console</CardTitle>
+            <CardTitle>{_("Console")}</CardTitle>
             <CardBody>
                 <Stack hasGutter>
                     <StackItem>
@@ -130,6 +128,8 @@ function GuacdConsole({
                             onCtrlAltDel={guacd.sendCtrlAltDel}
                             onFullscreen={fullscreen}
                             showEncodingPrefs={showEncodingPrefs}
+                            remoteClipboard={guacd.remoteClipboard}
+                            onSendClipboard={guacd.sendClipboard}
                         />
                     </StackItem>
                     <StackItem>

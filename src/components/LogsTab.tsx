@@ -16,6 +16,7 @@ import {
 import { ListIcon, SyncAltIcon } from "@patternfly/react-icons";
 
 import { LOG_LINE_CHOICES, LOG_PRIORITIES } from "../constants";
+import { _, format } from "../i18n";
 import { fetchLogs } from "../services/journal";
 import type { UiPrefs, UnitScope } from "../types";
 import { toUserMessage } from "../utils/errors";
@@ -42,7 +43,7 @@ export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabPr
         try {
             setLogs(await fetchLogs(unit, prefs.logLines, prefs.logPriority, scope));
         } catch (err) {
-            setError(toUserMessage(err, `Could not read the journal for ${unit}`));
+            setError(toUserMessage(err, format(_("Could not read the journal for $0"), unit)));
         } finally {
             setLoading(false);
         }
@@ -56,9 +57,9 @@ export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabPr
 
     if (!unit) {
         return (
-            <EmptyState titleText="No unit configured" headingLevel="h2" icon={ListIcon}>
+            <EmptyState titleText={_("No unit configured")} headingLevel="h2" icon={ListIcon}>
                 <EmptyStateBody>
-                    Select a remote desktop backend on the Dashboard or in Settings to see its service logs here.
+                    {_("Select a remote desktop backend on the Dashboard or in Settings to see its service logs here.")}
                 </EmptyStateBody>
             </EmptyState>
         );
@@ -66,33 +67,33 @@ export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabPr
 
     return (
         <Card className="ctr-logs-card">
-            <CardTitle>Service journal</CardTitle>
+            <CardTitle>{_("Service journal")}</CardTitle>
             <CardBody>
                 <Toolbar inset={{ default: "insetNone" }} className="ctr-logs-toolbar">
                     <ToolbarContent>
                         <ToolbarItem>
                             <Button variant="secondary" icon={<SyncAltIcon />} onClick={refresh}
                                     isLoading={loading} isDisabled={loading}>
-                                Refresh
+                                {_("Refresh")}
                             </Button>
                         </ToolbarItem>
                         <ToolbarItem>
-                            <FormSelect value={String(prefs.logLines)} aria-label="Number of log lines"
+                            <FormSelect value={String(prefs.logLines)} aria-label={_("Number of log lines")}
                                         onChange={(_event, value) => updatePrefs({ logLines: Number(value) })}>
                                 {LOG_LINE_CHOICES.map(n => (
-                                    <FormSelectOption key={n} value={String(n)} label={`Last ${n} lines`} />
+                                    <FormSelectOption key={n} value={String(n)} label={format(_("Last $0 lines"), n)} />
                                 ))}
                             </FormSelect>
                         </ToolbarItem>
                         <ToolbarItem>
                             <FormSelect value={prefs.logPriority === null ? "all" : String(prefs.logPriority)}
-                                        aria-label="Log severity filter"
+                                        aria-label={_("Log severity filter")}
                                         onChange={(_event, value) =>
                                             updatePrefs({ logPriority: value === "all" ? null : Number(value) })}>
                                 {LOG_PRIORITIES.map(p => (
                                     <FormSelectOption key={p.label}
                                                       value={p.value === null ? "all" : String(p.value)}
-                                                      label={p.label} />
+                                                      label={_(p.label)} />
                                 ))}
                             </FormSelect>
                         </ToolbarItem>
@@ -103,13 +104,13 @@ export function LogsTab({ unit, scope, prefs, updatePrefs, isActive }: LogsTabPr
                 </Toolbar>
                 {error && <Alert variant="danger" isInline title={error} className="pf-v6-u-mb-md" />}
                 {loading && logs === null
-                    ? <Loading text="Reading the journal…" />
+                    ? <Loading text={_("Reading the journal…")} />
                     : logs !== null && (
                         logs.trim() === ""
                             ? (
-                                <EmptyState titleText="No log entries" headingLevel="h2" icon={ListIcon}>
+                                <EmptyState titleText={_("No log entries")} headingLevel="h2" icon={ListIcon}>
                                     <EmptyStateBody>
-                                        The journal has no entries for {unit} matching the current filter.
+                                        {format(_("The journal has no entries for $0 matching the current filter."), unit)}
                                     </EmptyStateBody>
                                 </EmptyState>
                             )

@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "@patternfly/react-core";
 
+import { _ } from "../../i18n";
+
 export interface ConfirmDialogProps {
     title: string;
     isOpen: boolean;
@@ -45,7 +47,7 @@ export function ConfirmDialog({ title, isOpen, confirmLabel, variant = "primary"
                     {confirmLabel}
                 </Button>
                 <Button variant="link" onClick={onClose} isDisabled={busy}>
-                    Cancel
+                    {_("Cancel")}
                 </Button>
             </ModalFooter>
         </Modal>

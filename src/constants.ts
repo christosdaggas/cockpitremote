@@ -1,3 +1,4 @@
+import { N_ } from "./i18n";
 import type { BackendId, BackendProtocol, UiPrefs, UnitScope } from "./types";
 
 /** Machine-wide plugin configuration (JSON), readable by any admin session. */
@@ -23,12 +24,12 @@ export const LOG_LINE_CHOICES = [100, 200, 500, 1000] as const;
 
 /** journalctl -p levels offered in the UI (null = all). */
 export const LOG_PRIORITIES: Array<{ label: string; value: number | null }> = [
-    { label: "All levels", value: null },
-    { label: "Error and worse", value: 3 },
-    { label: "Warning and worse", value: 4 },
-    { label: "Notice and worse", value: 5 },
-    { label: "Info and worse", value: 6 },
-    { label: "Debug (everything)", value: 7 },
+    { label: N_("All levels"), value: null },
+    { label: N_("Error and worse"), value: 3 },
+    { label: N_("Warning and worse"), value: 4 },
+    { label: N_("Notice and worse"), value: 5 },
+    { label: N_("Info and worse"), value: 6 },
+    { label: N_("Debug (everything)"), value: 7 },
 ];
 
 export const DEFAULT_PREFS: UiPrefs = {
@@ -72,9 +73,7 @@ export const BACKENDS: BackendDef[] = [
         defaultUnit: "gnome-remote-desktop.service",
         unitScope: "user",
         defaultPort: 5900,
-        description:
-            "GNOME Remote Desktop's VNC endpoint, sharing the logged-in GNOME session " +
-            "when this GNOME build provides VNC support.",
+        description: N_("GNOME Remote Desktop's VNC endpoint, sharing the logged-in GNOME session when this GNOME build provides VNC support."),
         supportsPasswordTool: true,
         manageable: true,
     },
@@ -88,9 +87,7 @@ export const BACKENDS: BackendDef[] = [
         defaultUnit: "gnome-remote-desktop.service",
         unitScope: "user",
         defaultPort: DEFAULT_RDP_PORT,
-        description:
-            "GNOME Remote Desktop's RDP endpoint, sharing the logged-in GNOME session " +
-            "through the standard Remote Desktop Protocol.",
+        description: N_("GNOME Remote Desktop's RDP endpoint, sharing the logged-in GNOME session through the standard Remote Desktop Protocol."),
         supportsPasswordTool: false,
         manageable: true,
     },

@@ -6,6 +6,11 @@
     <title>Remote Desktop</title>
     <link href="index.css" rel="stylesheet">
     <script src="../base1/cockpit.js"></script>
+    <!-- cockpit-ws resolves this to the po.<lang>.js shipped beside the bundle
+         that matches the browser's language, and returns nothing when none
+         does, leaving the English source strings in place. It must run before
+         the deferred bundle so the catalogue is loaded by first render. -->
+    <script src="po.js"></script>
     <script defer src="index.js"></script>
 </head>
 <body class="pf-v6-m-tabular-nums">

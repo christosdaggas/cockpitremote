@@ -66,6 +66,10 @@ export interface Cockpit {
     user(): Promise<UserInfo>;
     transport?: Transport;
     gettext(text: string): string;
+    /** Substitutes $0, $1, … in a (usually translated) template. */
+    format(template: string, ...args: unknown[]): string;
+    /** The locale Cockpit resolved for this session, e.g. "de" or "pt-br". */
+    language?: string;
 }
 
 const cockpit: Cockpit =

@@ -9,6 +9,7 @@ import {
 } from "@patternfly/react-core";
 import { DesktopIcon, ExclamationCircleIcon, PluggedIcon } from "@patternfly/react-icons";
 
+import { _, format } from "../i18n";
 import type { ConsoleState } from "../hooks/consoleState";
 
 export interface GuacdScreenProps {
@@ -31,7 +32,7 @@ export function GuacdScreen({
     scaleToFit = true,
     onConnect,
 }: GuacdScreenProps) {
-    const label = protocol === "vnc" ? "GNOME VNC" : "GNOME RDP";
+    const label = protocol === "vnc" ? _("GNOME VNC") : _("GNOME RDP");
     const endpoint = protocol.toUpperCase();
 
     return (
@@ -43,7 +44,7 @@ export function GuacdScreen({
                     (scaleToFit ? " ctr-console-canvas-fit" : "")}
                 tabIndex={0}
                 role="application"
-                aria-label={`${endpoint} remote desktop input`}
+                aria-label={format(_("$0 remote desktop input"), endpoint)}
                 onPointerDownCapture={event => event.currentTarget.focus({ preventScroll: true })}
             />
             {state.kind !== "connected" && (
@@ -51,46 +52,48 @@ export function GuacdScreen({
                     {state.kind === "idle" && (
                         <EmptyState titleText={label} headingLevel="h2" icon={DesktopIcon}>
                             <EmptyStateBody>
-                                Connect to the host&apos;s {endpoint} endpoint at {target}. The browser talks to
-                                local guacd through Cockpit, then guacd connects to GNOME Remote Desktop.
+                                {format(_("Connect to the host's $0 endpoint at $1. The browser talks to local guacd through Cockpit, then guacd connects to GNOME Remote Desktop."),
+                                        endpoint, target)}
                             </EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>
-                                    <Button variant="primary" onClick={onConnect}>Connect</Button>
+                                    <Button variant="primary" onClick={onConnect}>{_("Connect")}</Button>
                                 </EmptyStateActions>
                             </EmptyStateFooter>
                         </EmptyState>
                     )}
                     {state.kind === "credentials" && (
-                        <EmptyState titleText={`${endpoint} credentials required`} headingLevel="h2" icon={DesktopIcon}>
+                        <EmptyState titleText={format(_("$0 credentials required"), endpoint)}
+                                    headingLevel="h2" icon={DesktopIcon}>
                             <EmptyStateBody>
-                                Enter the GNOME Remote Desktop {endpoint} credentials to continue.
+                                {format(_("Enter the GNOME Remote Desktop $0 credentials to continue."), endpoint)}
                             </EmptyStateBody>
                         </EmptyState>
                     )}
                     {state.kind === "connecting" && (
-                        <EmptyState titleText={`Connecting to ${target}…`} headingLevel="h2" icon={Spinner} />
+                        <EmptyState titleText={format(_("Connecting to $0…"), target)}
+                                    headingLevel="h2" icon={Spinner} />
                     )}
                     {state.kind === "error" && (
-                        <EmptyState titleText="Connection failed" headingLevel="h2" icon={ExclamationCircleIcon}>
+                        <EmptyState titleText={_("Connection failed")} headingLevel="h2" icon={ExclamationCircleIcon}>
                             <EmptyStateBody>{state.message}</EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>
-                                    <Button variant="primary" onClick={onConnect}>Retry</Button>
+                                    <Button variant="primary" onClick={onConnect}>{_("Retry")}</Button>
                                 </EmptyStateActions>
                             </EmptyStateFooter>
                         </EmptyState>
                     )}
                     {state.kind === "disconnected" && (
-                        <EmptyState titleText="Disconnected" headingLevel="h2" icon={PluggedIcon}>
+                        <EmptyState titleText={_("Disconnected")} headingLevel="h2" icon={PluggedIcon}>
                             <EmptyStateBody>
                                 {state.clean
-                                    ? "The session was closed."
-                                    : `The connection to the ${endpoint} server was lost.`}
+                                    ? _("The session was closed.")
+                                    : format(_("The connection to the $0 server was lost."), endpoint)}
                             </EmptyStateBody>
                             <EmptyStateFooter>
                                 <EmptyStateActions>
-                                    <Button variant="primary" onClick={onConnect}>Reconnect</Button>
+                                    <Button variant="primary" onClick={onConnect}>{_("Reconnect")}</Button>
                                 </EmptyStateActions>
                             </EmptyStateFooter>
                         </EmptyState>

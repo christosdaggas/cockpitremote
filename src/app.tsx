@@ -11,6 +11,7 @@ import {
 } from "@patternfly/react-core";
 
 import { backendDef, GUACD_UNIT } from "./constants";
+import { _ } from "./i18n";
 import { useBackends } from "./hooks/useBackends";
 import { useConfig, usePrefs } from "./hooks/useConfig";
 import { NotifyContext, type NotifyFn, type NotifyVariant } from "./notifications";
@@ -32,11 +33,15 @@ interface Toast {
 
 let toastCounter = 0;
 
+/*
+ * Built at load, which is after the shell's po.js has run, so the labels come
+ * out in the reader's language.
+ */
 const NAV_ITEMS = [
-    { id: "dashboard", label: "Dashboard", description: "Backend detection, service state, and connection health." },
-    { id: "console", label: "Remote desktop", description: "Connect to the host desktop through Cockpit's authenticated session." },
-    { id: "settings", label: "Settings", description: "Configure the remote desktop backend, target address, service unit, and passwords." },
-    { id: "logs", label: "Logs", description: "Inspect recent journal entries for the configured remote desktop service." },
+    { id: "dashboard", label: _("Dashboard"), description: _("Backend detection, service state, and connection health.") },
+    { id: "console", label: _("Remote desktop"), description: _("Connect to the host desktop through Cockpit's authenticated session.") },
+    { id: "settings", label: _("Settings"), description: _("Configure the remote desktop backend, target address, service unit, and passwords.") },
+    { id: "logs", label: _("Logs"), description: _("Inspect recent journal entries for the configured remote desktop service.") },
 ] as const;
 
 type TabId = typeof NAV_ITEMS[number]["id"];
@@ -66,11 +71,11 @@ export function App() {
         guacdStartupAttempted.current = true;
         ensureSystemServiceStarted(GUACD_UNIT).then(installed => {
             if (!installed)
-                notify("warning", "guacd is not installed", "Install guacd to use the browser remote desktop.");
+                notify("warning", _("guacd is not installed"), _("Install guacd to use the browser remote desktop."));
             else
                 refreshBackends();
         }).catch(err => {
-            notify("danger", "Could not start guacd", toUserMessage(err));
+            notify("danger", _("Could not start guacd"), toUserMessage(err));
         });
     }, [configLoading, notify, refreshBackends]);
 
@@ -95,13 +100,13 @@ export function App() {
     const activeItem = NAV_ITEMS.find(item => item.id === activeTab) ?? NAV_ITEMS[0];
 
     if (configLoading)
-        return <Loading text="Loading configuration…" />;
+        return <Loading text={_("Loading configuration…")} />;
 
     return (
         <NotifyContext.Provider value={notify}>
             <Page sidebar={null} className="ctr-page">
                 <PageSection className="ctr-header" hasBodyWrapper={false}>
-                    <Nav variant="horizontal-subnav" aria-label="Local">
+                    <Nav variant="horizontal-subnav" aria-label={_("Local")}>
                         <NavList>
                             {NAV_ITEMS.map(item => (
                                 <NavItem

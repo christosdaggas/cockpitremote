@@ -8,6 +8,7 @@ import {
 } from "@patternfly/react-core";
 
 import { backendDef } from "../constants";
+import { _ } from "../i18n";
 import type { BackendInfo } from "../types";
 import { ActiveLabel, EnabledLabel } from "./common/StatusLabel";
 import { ServiceActions } from "./ServiceActions";
@@ -33,39 +34,39 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                 <div className="ctr-backend-card-heading">
                     <div>
                         <h3 className="ctr-backend-card-title">{backend.label}</h3>
-                        <p className="ctr-backend-card-summary">{def.description}</p>
+                        <p className="ctr-backend-card-summary">{_(def.description)}</p>
                     </div>
-                    {isSelected && <Label color="purple">Selected</Label>}
+                    {isSelected && <Label color="purple">{_("Selected")}</Label>}
                 </div>
 
                 <div className="ctr-backend-labels">
                     <Label color={backend.protocol === "rdp" ? "orange" : "cyan"}>{backend.protocol.toUpperCase()}</Label>
                     {installed
-                        ? <Label color="blue">installed{backend.version ? ` ${backend.version}` : ""}</Label>
-                        : <Label color="grey">not installed</Label>}
+                        ? <Label color="blue">{_("installed")}{backend.version ? ` ${backend.version}` : ""}</Label>
+                        : <Label color="grey">{_("not installed")}</Label>}
                     {installed && <ActiveLabel status={backend.status} />}
                     {installed && <EnabledLabel status={backend.status} />}
-                    {!backend.supported && <Label color="gold">not supported</Label>}
+                    {!backend.supported && <Label color="gold">{_("not supported")}</Label>}
                 </div>
 
                 <DescriptionList isCompact isHorizontal className="ctr-backend-details">
                     <DescriptionListGroup>
-                        <DescriptionListTerm>Binary</DescriptionListTerm>
+                        <DescriptionListTerm>{_("Binary")}</DescriptionListTerm>
                         <DescriptionListDescription id={`${backend.id}-binary`}>
-                            {backend.binaryPath ?? "Not found"}
+                            {backend.binaryPath ?? _("Not found")}
                         </DescriptionListDescription>
                     </DescriptionListGroup>
                     {unit && (
                         <DescriptionListGroup>
-                            <DescriptionListTerm>Unit</DescriptionListTerm>
+                            <DescriptionListTerm>{_("Unit")}</DescriptionListTerm>
                             <DescriptionListDescription id={`${backend.id}-unit`}>
-                                {unit}{backend.unitScope === "user" ? " (user service)" : ""}
+                                {unit}{backend.unitScope === "user" ? ` ${_("(user service)")}` : ""}
                             </DescriptionListDescription>
                         </DescriptionListGroup>
                     )}
                     {installed && (
                         <DescriptionListGroup>
-                            <DescriptionListTerm>Port</DescriptionListTerm>
+                            <DescriptionListTerm>{_("Port")}</DescriptionListTerm>
                             <DescriptionListDescription id={`${backend.id}-port`}>
                                 {port}
                             </DescriptionListDescription>
@@ -73,11 +74,11 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                     )}
                     {backend.vncScreenShareMode && (
                         <DescriptionListGroup>
-                            <DescriptionListTerm>Screen</DescriptionListTerm>
+                            <DescriptionListTerm>{_("Screen")}</DescriptionListTerm>
                             <DescriptionListDescription id={`${backend.id}-screen`}>
                                 {backend.vncScreenShareMode === "extend"
-                                    ? "Virtual monitor (headless)"
-                                    : "Mirrors the logged-in desktop"}
+                                    ? _("Virtual monitor (headless)")
+                                    : _("Mirrors the logged-in desktop")}
                             </DescriptionListDescription>
                         </DescriptionListGroup>
                     )}
@@ -97,10 +98,10 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                 )}
                 {installed && backend.supported && !isSelected && (
                     <Button variant="secondary" size="sm" onClick={() => onSelect(backend)}>
-                        Use this backend
+                        {_("Use this backend")}
                     </Button>
                 )}
-                {!installed && <span className="ctr-backend-card-hint">Install this backend on the host.</span>}
+                {!installed && <span className="ctr-backend-card-hint">{_("Install this backend on the host.")}</span>}
             </div>
         </section>
     );

@@ -23,6 +23,15 @@ export interface GuacdControls {
     disconnect: () => void;
     sendCredentials: (credentials: GuacdCredentials) => void;
     sendCtrlAltDel: () => void;
+    /**
+     * The last selection copied on the remote desktop. Held here because
+     * Firefox only lets the page write the local clipboard while handling a
+     * user gesture, so the automatic write silently fails there and the text
+     * has to stay available for a button to copy on demand.
+     */
+    remoteClipboard: string;
+    /** Sends text to the remote clipboard without needing a paste shortcut. */
+    sendClipboard: (text: string) => void;
 }
 
 const CTRL = 0xffe3;
@@ -114,6 +123,7 @@ function displaySize(container: HTMLDivElement): { width: number; height: number
 
 export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, protocol: GuacdProtocol = "rdp"): GuacdControls {
     const [state, setState] = useState<ConsoleState>({ kind: "idle" });
+    const [remoteClipboard, setRemoteClipboard] = useState("");
     const clientRef = useRef<GuacamoleClient | null>(null);
     const keyboardRef = useRef<GuacamoleKeyboard | null>(null);
     const timeoutRef = useRef<number | null>(null);
@@ -177,6 +187,8 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
 
     const teardown = useCallback(() => {
         clearConnectTimeout();
+        // One session's copied text must not linger in the next session's panel.
+        setRemoteClipboard("");
         resizeObserverRef.current?.disconnect();
         resizeObserverRef.current = null;
         // Drop the cached geometry so the next session measures afresh.
@@ -413,12 +425,16 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
                     stream.sendAck("Clipboard selection is too large", 0x030d);
             };
             reader.onend = () => {
+                const text = collector.text();
+                if (!text)
+                    return;
+                // Kept regardless of what the browser allows, so the toolbar
+                // can offer it behind a button.
+                setRemoteClipboard(text);
                 // Best effort: browsers may refuse a clipboard write that is
                 // not tied to a user gesture, in which case the remote
                 // selection simply stays on the remote.
-                const text = collector.text();
-                if (text)
-                    navigator.clipboard?.writeText(text).catch(() => {});
+                navigator.clipboard?.writeText(text).catch(() => {});
             };
         };
 
@@ -487,7 +503,14 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
         client.sendKeyEvent(0, CTRL);
     }, []);
 
+    const sendClipboard = useCallback((text: string) => {
+        const client = clientRef.current;
+        if (!client || !text)
+            return;
+        sendClipboardText(client, text);
+    }, []);
+
     useEffect(() => teardown, [teardown]);
 
-    return { state, connect, disconnect, sendCredentials, sendCtrlAltDel };
+    return { state, connect, disconnect, sendCredentials, sendCtrlAltDel, remoteClipboard, sendClipboard };
 }

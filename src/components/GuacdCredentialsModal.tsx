@@ -10,6 +10,7 @@ import {
     TextInput,
 } from "@patternfly/react-core";
 
+import { _, format } from "../i18n";
 import type { GuacdCredentials } from "../services/guacdTunnel";
 
 export interface GuacdCredentialsModalProps {
@@ -54,38 +55,38 @@ export function GuacdCredentialsModal({ protocol, isOpen, onSubmit, onCancel }: 
             isOpen={isOpen}
             onClose={cancel}
         >
-            <ModalHeader title={`${label} authentication required`} labelId="ctr-guacd-credentials-modal-title" />
+            <ModalHeader title={format(_("$0 authentication required"), label)} labelId="ctr-guacd-credentials-modal-title" />
             <ModalBody>
                 <Form onSubmit={submit}>
                     {protocol === "rdp" && (
-                        <FormGroup label="RDP username" fieldId="guacd-username" isRequired>
+                        <FormGroup label={_("RDP username")} fieldId="guacd-username" isRequired>
                             <TextInput
                                 id="guacd-username"
                                 value={username}
                                 onChange={(_event, value) => setUsername(value)}
                                 autoComplete="off"
-                                aria-label="RDP username"
+                                aria-label={_("RDP username")}
                             />
                         </FormGroup>
                     )}
-                    <FormGroup label={`${label} password`} fieldId="guacd-password" isRequired>
+                    <FormGroup label={format(_("$0 password"), label)} fieldId="guacd-password" isRequired>
                         <TextInput
                             id="guacd-password"
                             type="password"
                             value={password}
                             onChange={(_event, value) => setPassword(value)}
                             autoComplete="off"
-                            aria-label={`${label} password`}
+                            aria-label={format(_("$0 password"), label)}
                         />
                     </FormGroup>
                     {protocol === "rdp" && (
-                        <FormGroup label="Domain" fieldId="guacd-domain">
+                        <FormGroup label={_("Domain")} fieldId="guacd-domain">
                             <TextInput
                                 id="guacd-domain"
                                 value={domain}
                                 onChange={(_event, value) => setDomain(value)}
                                 autoComplete="off"
-                                aria-label="RDP domain"
+                                aria-label={_("RDP domain")}
                             />
                         </FormGroup>
                     )}
@@ -94,9 +95,9 @@ export function GuacdCredentialsModal({ protocol, isOpen, onSubmit, onCancel }: 
             <ModalFooter>
                 <Button variant="primary" onClick={() => submit()}
                         isDisabled={(usernameRequired && username.trim().length === 0) || password.length === 0}>
-                    Connect
+                    {_("Connect")}
                 </Button>
-                <Button variant="link" onClick={cancel}>Cancel</Button>
+                <Button variant="link" onClick={cancel}>{_("Cancel")}</Button>
             </ModalFooter>
         </Modal>
     );

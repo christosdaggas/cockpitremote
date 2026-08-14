@@ -11,8 +11,10 @@ import {
 } from "@patternfly/react-core";
 import { ExpandIcon } from "@patternfly/react-icons";
 
+import { _, format } from "../i18n";
 import type { ConsoleState } from "../hooks/consoleState";
 import type { UiPrefs } from "../types";
+import { ClipboardPanel } from "./ClipboardPanel";
 import { ConfirmDialog } from "./common/ConfirmDialog";
 
 export interface ConsoleToolbarProps {
@@ -24,6 +26,9 @@ export interface ConsoleToolbarProps {
     onCtrlAltDel: () => void;
     onFullscreen: () => void;
     showEncodingPrefs?: boolean;
+    /** Last selection copied on the remote desktop, for the clipboard panel. */
+    remoteClipboard: string;
+    onSendClipboard: (text: string) => void;
 }
 
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -37,6 +42,8 @@ export function ConsoleToolbar({
     onCtrlAltDel,
     onFullscreen,
     showEncodingPrefs = true,
+    remoteClipboard,
+    onSendClipboard,
 }: ConsoleToolbarProps) {
     const connected = state.kind === "connected";
     const busy = state.kind === "connecting" || state.kind === "credentials";
@@ -49,17 +56,21 @@ export function ConsoleToolbar({
                     <ToolbarGroup>
                         <ToolbarItem>
                             {connected || busy
-                                ? <Button variant="secondary" isDanger onClick={onDisconnect}>Disconnect</Button>
-                                : <Button variant="primary" onClick={onConnect}>Connect</Button>}
+                                ? <Button variant="secondary" isDanger onClick={onDisconnect}>{_("Disconnect")}</Button>
+                                : <Button variant="primary" onClick={onConnect}>{_("Connect")}</Button>}
                         </ToolbarItem>
                         <ToolbarItem>
                             <Button variant="secondary" isDisabled={!connected || prefs.viewOnly}
                                     onClick={() => setConfirmCad(true)}>
-                                Send Ctrl+Alt+Del
+                                {_("Send Ctrl+Alt+Del")}
                             </Button>
                         </ToolbarItem>
                         <ToolbarItem>
-                            <Button variant="plain" aria-label="Fullscreen" isDisabled={!connected}
+                            <ClipboardPanel remoteClipboard={remoteClipboard} isConnected={connected}
+                                            onSend={onSendClipboard} />
+                        </ToolbarItem>
+                        <ToolbarItem>
+                            <Button variant="plain" aria-label={_("Fullscreen")} isDisabled={!connected}
                                     onClick={onFullscreen} icon={<ExpandIcon />} />
                         </ToolbarItem>
                     </ToolbarGroup>
@@ -67,7 +78,7 @@ export function ConsoleToolbar({
                         <ToolbarItem alignSelf="center">
                             <Switch
                                 id="ctr-view-only"
-                                label="View only"
+                                label={_("View only")}
                                 isChecked={prefs.viewOnly}
                                 onChange={(_event, checked) => updatePrefs({ viewOnly: checked })}
                             />
@@ -75,7 +86,7 @@ export function ConsoleToolbar({
                         <ToolbarItem alignSelf="center">
                             <Switch
                                 id="ctr-scale"
-                                label="Scale to fit"
+                                label={_("Scale to fit")}
                                 isChecked={prefs.scaleViewport}
                                 onChange={(_event, checked) => updatePrefs({ scaleViewport: checked })}
                             />
@@ -85,11 +96,12 @@ export function ConsoleToolbar({
                                 <FormSelect
                                     value={String(prefs.qualityLevel)}
                                     onChange={(_event, value) => updatePrefs({ qualityLevel: Number(value) })}
-                                    aria-label="Image quality, applied on the next connection"
+                                    aria-label={_("Image quality, applied on the next connection")}
                                     style={{ minWidth: "9rem" }}
                                 >
                                     {LEVELS.map(level => (
-                                        <FormSelectOption key={level} value={String(level)} label={`Quality ${level}`} />
+                                        <FormSelectOption key={level} value={String(level)}
+                                                          label={format(_("Quality $0"), level)} />
                                     ))}
                                 </FormSelect>
                             </ToolbarItem>
@@ -99,11 +111,12 @@ export function ConsoleToolbar({
                                 <FormSelect
                                     value={String(prefs.compressionLevel)}
                                     onChange={(_event, value) => updatePrefs({ compressionLevel: Number(value) })}
-                                    aria-label="Compression level, applied on the next connection"
+                                    aria-label={_("Compression level, applied on the next connection")}
                                     style={{ minWidth: "10rem" }}
                                 >
                                     {LEVELS.map(level => (
-                                        <FormSelectOption key={level} value={String(level)} label={`Compression ${level}`} />
+                                        <FormSelectOption key={level} value={String(level)}
+                                                          label={format(_("Compression $0"), level)} />
                                     ))}
                                 </FormSelect>
                             </ToolbarItem>
@@ -112,15 +125,14 @@ export function ConsoleToolbar({
                 </ToolbarContent>
             </Toolbar>
             <ConfirmDialog
-                title="Send Ctrl+Alt+Del?"
+                title={_("Send Ctrl+Alt+Del?")}
                 isOpen={confirmCad}
-                confirmLabel="Send"
+                confirmLabel={_("Send")}
                 variant="danger"
                 onClose={() => setConfirmCad(false)}
                 onConfirm={onCtrlAltDel}
             >
-                This key combination is sent to the remote desktop and may log out the session or
-                open the system monitor, depending on the desktop environment.
+                {_("This key combination is sent to the remote desktop and may log out the session or open the system monitor, depending on the desktop environment.")}
             </ConfirmDialog>
         </>
     );

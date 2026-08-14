@@ -24,7 +24,7 @@ or control the host's desktop right in the browser.
 | Tab | What it does |
 | --- | --- |
 | **Dashboard** | Detects GNOME Remote Desktop's VNC/RDP endpoints, shows service state, version and health checks (transport, unit, port, session), and offers start/stop/restart/enable/disable with confirmation dialogs. |
-| **Remote desktop** | The browser console: connect/disconnect, fullscreen, Send Ctrl+Alt+Del (confirmed), view-only, scale-to-fit, clipboard sync, and a credentials prompt per connection. |
+| **Remote desktop** | The browser console: connect/disconnect, fullscreen, Send Ctrl+Alt+Del (confirmed), a clipboard panel, view-only, scale-to-fit, clipboard sync, and a credentials prompt per connection. |
 | **Settings** | Backend, RDP session mode, VNC session mode, systemd unit, address and port. Sets the GNOME VNC password through `grdctl` stdin — never argv, never logged. Saved to `/etc/cockpit/cockpitremote.json`. |
 | **Logs** | Recent `journalctl` entries for the managed unit, filtered by line count and severity. |
 
@@ -39,6 +39,17 @@ forwarded as X11 keysyms. Clipboard sync works in both directions:
   actually copied locally.
 - **Out of the session** — text copied on the remote desktop is written to your
   local clipboard on a best-effort basis.
+
+Both halves depend on browser permissions that quietly refuse: Firefox only
+allows a clipboard write while handling a user gesture, and a browser that
+suppresses the paste event leaves nothing to forward. The toolbar's
+**Clipboard** button is the manual path for those cases — it shows the last
+selection copied on the remote with a *Copy* button (the click is the gesture
+Firefox wants), and a box for sending text the other way without a shortcut.
+
+A selection arriving from the remote is capped at one mebibyte; the stream is
+server-driven, so an unbounded one could grow the page's memory until the tab
+died.
 
 ### RDP session modes
 
@@ -143,7 +154,7 @@ Download the RPM from the [releases page](https://github.com/christosdaggas/cock
 and install it:
 
 ```sh
-sudo dnf install ./cockpit-cockpitremote-1.0.0-10.fc44.noarch.rpm
+sudo dnf install ./cockpit-cockpitremote-1.0.0-11.fc44.noarch.rpm
 ```
 
 Then hard-reload Cockpit in the browser so it drops the cached bundle. If the
@@ -283,16 +294,36 @@ view-only, log filters) live in `localStorage`.
   monitor have no such limit.
 - Managing user-scoped systemd units (`systemctl --user`) is not supported.
 - No automated end-to-end console tests.
-- English only (no i18n yet).
+- Translations cover the plugin's own strings, not PatternFly's or Cockpit's
+  shell.
+
+## Translations
+
+The interface ships in **English, Greek, German, Italian, French and
+Portuguese**. Nothing selects a language: `index.html` asks for `po.js`, and
+cockpit-ws serves whichever `po.<lang>.js` matches the browser's
+`Accept-Language`, exactly as the stock Cockpit pages do. English is the source
+language and has no catalogue — gettext returns the string it was given
+whenever no translation exists, which is also what makes a partly translated
+catalogue safe.
+
+Catalogues live in `po/<lang>.json` as plain `"English source": "translation"`
+maps, and `build.js` turns each one into the `cockpit.locale()` call Cockpit
+expects. To add a language, drop in another JSON file; the build picks it up by
+filename.
+
+Strings are marked in the source with `_()`, or with `N_()` where the text is
+written in a table of constants and translated at the point it is read.
+`test/i18n.test.ts` extracts those markers and fails the build if a catalogue
+is missing an entry, carries one the code no longer uses, leaves a translation
+empty, or drops a `$0` placeholder — so a reworded string cannot quietly fall
+back to English.
 
 ## Roadmap
 
 - Screenshots in the docs
-- Explicit clipboard controls in the console toolbar (the sync itself is already
-  wired up; there is no button for it yet)
 - Optional reduced-resolution rendering for slow links
 - RPM/DEB packaging in CI
-- i18n through Cockpit's gettext support
 
 ## License
 

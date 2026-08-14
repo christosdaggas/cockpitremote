@@ -1,7 +1,9 @@
 import { Label } from "@patternfly/react-core";
 import { CheckCircleIcon, ExclamationCircleIcon, ExclamationTriangleIcon, QuestionCircleIcon } from "@patternfly/react-icons";
 
+import { _ } from "../../i18n";
 import type { HealthState, ServiceStatus } from "../../types";
+import { activeStateText } from "../../utils/labels";
 
 const STATE_PROPS: Record<HealthState, { color: "green" | "red" | "gold" | "grey"; icon: JSX.Element }> = {
     ok: { color: "green", icon: <CheckCircleIcon /> },
@@ -17,17 +19,17 @@ export function HealthLabel({ state, text }: { state: HealthState; text: string 
 
 export function ActiveLabel({ status }: { status: ServiceStatus | null }) {
     if (!status || !status.exists)
-        return <Label color="grey">no unit</Label>;
+        return <Label color="grey">{_("no unit")}</Label>;
     switch (status.activeState) {
     case "active":
-        return <Label color="green" icon={<CheckCircleIcon />}>active</Label>;
+        return <Label color="green" icon={<CheckCircleIcon />}>{activeStateText("active")}</Label>;
     case "failed":
-        return <Label color="red" icon={<ExclamationCircleIcon />}>failed</Label>;
+        return <Label color="red" icon={<ExclamationCircleIcon />}>{activeStateText("failed")}</Label>;
     case "activating":
     case "deactivating":
-        return <Label color="gold">{status.activeState}</Label>;
+        return <Label color="gold">{activeStateText(status.activeState)}</Label>;
     default:
-        return <Label color="grey">{status.activeState}</Label>;
+        return <Label color="grey">{activeStateText(status.activeState)}</Label>;
     }
 }
 
@@ -37,7 +39,7 @@ export function EnabledLabel({ status }: { status: ServiceStatus | null }) {
     const enabled = status.unitFileState === "enabled";
     return (
         <Label color={enabled ? "blue" : "grey"} variant="outline">
-            {enabled ? "starts on boot" : status.unitFileState}
+            {enabled ? _("starts on boot") : status.unitFileState}
         </Label>
     );
 }

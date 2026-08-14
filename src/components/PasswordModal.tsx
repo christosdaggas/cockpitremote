@@ -14,6 +14,7 @@ import {
     TextInput,
 } from "@patternfly/react-core";
 
+import { _, format } from "../i18n";
 import { useNotify } from "../notifications";
 import { setGrdVncPassword } from "../services/vncpassword";
 import type { BackendId } from "../types";
@@ -67,10 +68,10 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
         try {
             if (backend === "grd") {
                 await setGrdVncPassword(password);
-                notify("success", "GNOME Remote Desktop updated",
-                       "VNC password authentication is enabled; new connections will not require approval on the host desktop.");
+                notify("success", _("GNOME Remote Desktop updated"),
+                       _("VNC password authentication is enabled; new connections will not require approval on the host desktop."));
             } else {
-                throw new ValidationError(`Password management is not supported for ${backend}.`);
+                throw new ValidationError(format(_("Password management is not supported for $0."), backend));
             }
             await onUpdated?.();
             close();
@@ -78,7 +79,7 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
             if (isCancelled(err))
                 close();
             else
-                setError(toUserMessage(err, "Could not set the password"));
+                setError(toUserMessage(err, _("Could not set the password")));
         } finally {
             setBusy(false);
         }
@@ -93,22 +94,22 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
             isOpen={isOpen}
             onClose={busy ? undefined : close}
         >
-            <ModalHeader title="Set VNC password" labelId="ctr-password-modal-title" />
+            <ModalHeader title={_("Set VNC password")} labelId="ctr-password-modal-title" />
             <ModalBody>
                 <Form>
                     {error && <Alert variant="danger" isInline title={error} />}
                     {backend === "grd" && (
                         <Alert variant="info" isInline isPlain
-                               title="This switches GNOME Remote Desktop VNC from desktop approval prompts to password authentication for the current Cockpit user." />
+                               title={_("This switches GNOME Remote Desktop VNC from desktop approval prompts to password authentication for the current Cockpit user.")} />
                     )}
-                    <FormGroup label="New VNC password" fieldId="ctr-new-password" isRequired>
+                    <FormGroup label={_("New VNC password")} fieldId="ctr-new-password" isRequired>
                         <TextInput
                             id="ctr-new-password"
                             type="password"
                             value={password}
                             onChange={(_event, value) => setPassword(value)}
                             autoComplete="new-password"
-                            aria-label="New VNC password"
+                            aria-label={_("New VNC password")}
                         />
                         {warning && (
                             <FormHelperText>
@@ -118,7 +119,7 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
                             </FormHelperText>
                         )}
                     </FormGroup>
-                    <FormGroup label="Confirm password" fieldId="ctr-confirm-password" isRequired>
+                    <FormGroup label={_("Confirm password")} fieldId="ctr-confirm-password" isRequired>
                         <TextInput
                             id="ctr-confirm-password"
                             type="password"
@@ -126,12 +127,12 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
                             onChange={(_event, value) => setConfirm(value)}
                             autoComplete="new-password"
                             validated={mismatch ? "error" : "default"}
-                            aria-label="Confirm VNC password"
+                            aria-label={_("Confirm VNC password")}
                         />
                         {mismatch && (
                             <FormHelperText>
                                 <HelperText>
-                                    <HelperTextItem variant="error">Passwords do not match.</HelperTextItem>
+                                    <HelperTextItem variant="error">{_("Passwords do not match.")}</HelperTextItem>
                                 </HelperText>
                             </FormHelperText>
                         )}
@@ -140,10 +141,10 @@ export function PasswordModal({ backend, isOpen, onClose, onUpdated }: PasswordM
             </ModalBody>
             <ModalFooter>
                 <Button variant="primary" onClick={submit} isDisabled={!canSubmit} isLoading={busy}>
-                    Set password
+                    {_("Set password")}
                 </Button>
                 <Button variant="link" onClick={close} isDisabled={busy}>
-                    Cancel
+                    {_("Cancel")}
                 </Button>
             </ModalFooter>
         </Modal>
