@@ -17,10 +17,20 @@ export interface GuacdScreenProps {
     state: ConsoleState;
     target: string;
     protocol?: "rdp" | "vnc";
+    /** Mirrors the "Scale to fit" preference: when set, the box never scrolls. */
+    scaleToFit?: boolean;
     onConnect: () => void;
 }
 
-export function GuacdScreen({ screenRef, containerRef, state, target, protocol = "rdp", onConnect }: GuacdScreenProps) {
+export function GuacdScreen({
+    screenRef,
+    containerRef,
+    state,
+    target,
+    protocol = "rdp",
+    scaleToFit = true,
+    onConnect,
+}: GuacdScreenProps) {
     const label = protocol === "vnc" ? "GNOME VNC" : "GNOME RDP";
     const endpoint = protocol.toUpperCase();
 
@@ -28,7 +38,9 @@ export function GuacdScreen({ screenRef, containerRef, state, target, protocol =
         <div ref={screenRef} className="ctr-console">
             <div
                 ref={containerRef}
-                className={`ctr-console-canvas${state.kind === "connected" ? " ctr-console-canvas-connected" : ""}`}
+                className={"ctr-console-canvas" +
+                    (state.kind === "connected" ? " ctr-console-canvas-connected" : "") +
+                    (scaleToFit ? " ctr-console-canvas-fit" : "")}
                 tabIndex={0}
                 role="application"
                 aria-label={`${endpoint} remote desktop input`}

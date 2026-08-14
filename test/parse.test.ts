@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     extractVersion,
     parseGetentPasswd,
+    parseGsettingsValue,
     parseGrdStatus,
     parseKeyValueOutput,
     parseOsRelease,
@@ -278,6 +279,19 @@ describe("parseGrdStatus", () => {
     it("tolerates empty and garbage output", () => {
         expect(parseGrdStatus("").hasVnc).toBe(false);
         expect(parseGrdStatus("error: cannot connect to the display\n").hasVnc).toBe(false);
+    });
+});
+
+describe("parseGsettingsValue", () => {
+    it("unwraps the quoted enum gsettings prints", () => {
+        expect(parseGsettingsValue("'mirror-primary'\n")).toBe("mirror-primary");
+        expect(parseGsettingsValue("'extend'\n")).toBe("extend");
+    });
+
+    it("leaves unquoted values alone", () => {
+        expect(parseGsettingsValue("true\n")).toBe("true");
+        expect(parseGsettingsValue("")).toBe("");
+        expect(parseGsettingsValue("'")).toBe("'");
     });
 });
 

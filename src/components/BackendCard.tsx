@@ -71,6 +71,16 @@ export function BackendCard({ backend, isSelected, activeUnit, onSelect, onRefre
                             </DescriptionListDescription>
                         </DescriptionListGroup>
                     )}
+                    {backend.vncScreenShareMode && (
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Screen</DescriptionListTerm>
+                            <DescriptionListDescription id={`${backend.id}-screen`}>
+                                {backend.vncScreenShareMode === "extend"
+                                    ? "Virtual monitor (headless)"
+                                    : "Mirrors the logged-in desktop"}
+                            </DescriptionListDescription>
+                        </DescriptionListGroup>
+                    )}
                 </DescriptionList>
 
                 {backend.notes.length > 0 && (

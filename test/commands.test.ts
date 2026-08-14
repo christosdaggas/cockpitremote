@@ -17,6 +17,8 @@ import {
     buildSystemctlShowArgs,
     buildSsListeningProcessArgs,
     buildVersionArgs,
+    buildVncScreenShareModeGetArgs,
+    buildVncScreenShareModeSetArgs,
     buildVncpasswdArgs,
     buildWhichArgs,
 } from "../src/services/commands";
@@ -159,6 +161,29 @@ describe("buildGrdctlStatusArgs", () => {
 
     it("rejects unknown GNOME Remote Desktop VNC auth methods", () => {
         expect(() => buildGrdctlVncSetAuthMethodArgs("none" as never)).toThrow(ValidationError);
+    });
+});
+
+describe("VNC screen-share mode", () => {
+    it("addresses exactly one GSettings key", () => {
+        expect(buildVncScreenShareModeGetArgs()).toEqual([
+            "gsettings", "get", "org.gnome.desktop.remote-desktop.vnc", "screen-share-mode",
+        ]);
+        expect(buildVncScreenShareModeSetArgs("extend")).toEqual([
+            "gsettings", "set", "org.gnome.desktop.remote-desktop.vnc", "screen-share-mode", "extend",
+        ]);
+        expect(buildVncScreenShareModeSetArgs("mirror-primary")).toEqual([
+            "gsettings", "set", "org.gnome.desktop.remote-desktop.vnc", "screen-share-mode", "mirror-primary",
+        ]);
+    });
+
+    it.each([
+        "headless",
+        "",
+        "--schemadir",
+        "extend org.gnome.desktop.remote-desktop.rdp",
+    ])("rejects value %j, which is not in the schema's enum", mode => {
+        expect(() => buildVncScreenShareModeSetArgs(mode as never)).toThrow(ValidationError);
     });
 });
 

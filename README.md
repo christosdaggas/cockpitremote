@@ -25,7 +25,7 @@ or control the host's desktop right in the browser.
 | --- | --- |
 | **Dashboard** | Detects GNOME Remote Desktop's VNC/RDP endpoints, shows service state, version and health checks (transport, unit, port, session), and offers start/stop/restart/enable/disable with confirmation dialogs. |
 | **Remote desktop** | The browser console: connect/disconnect, fullscreen, Send Ctrl+Alt+Del (confirmed), view-only, scale-to-fit, clipboard sync, and a credentials prompt per connection. |
-| **Settings** | Backend, RDP session mode, systemd unit, address and port. Sets the GNOME VNC password through `grdctl` stdin — never argv, never logged. Saved to `/etc/cockpit/cockpitremote.json`. |
+| **Settings** | Backend, RDP session mode, VNC session mode, systemd unit, address and port. Sets the GNOME VNC password through `grdctl` stdin — never argv, never logged. Saved to `/etc/cockpit/cockpitremote.json`. |
 | **Logs** | Recent `journalctl` entries for the managed unit, filtered by line count and severity. |
 
 ### Keyboard and clipboard
@@ -55,6 +55,31 @@ The plugin reads both configurations (`grdctl status` and
 Note that when both daemons run, GNOME negotiates a second port for the
 user-session daemon — typically `3390`, because the system daemon already holds
 `3389`. The Dashboard reports the port it detected.
+
+### VNC session modes
+
+VNC has no second daemon, but it does choose where its picture comes from, and
+Settings offers the same choice:
+
+| Mode | Screen | Resolution |
+| --- | --- | --- |
+| **Screen sharing** | Records the primary monitor of the logged-in GNOME session | Fixed by the real monitor |
+| **Virtual monitor** | A screen created for the connection — no physical monitor needed | Starts at 1920x1080, then follows the browser |
+
+This one is GNOME's own setting rather than a plugin preference, so the plugin
+reads and writes it directly:
+
+```sh
+gsettings get org.gnome.desktop.remote-desktop.vnc screen-share-mode
+```
+
+It matters more than it sounds. In screen-sharing mode there must be a session
+sitting at a monitor to record — if the only session is a headless *Remote
+Login*, or the machine was rebooted and nobody logged in locally, GNOME logs
+`Failed to record monitor: Unknown monitor` and drops the connection right
+after authentication. Picking the virtual monitor removes that requirement.
+Either way the change applies to the next connection; sessions already running
+keep the screen they started with.
 
 ## How it works
 
@@ -118,7 +143,7 @@ Download the RPM from the [releases page](https://github.com/christosdaggas/cock
 and install it:
 
 ```sh
-sudo dnf install ./cockpit-cockpitremote-1.0.0-7.fc44.noarch.rpm
+sudo dnf install ./cockpit-cockpitremote-1.0.0-9.fc44.noarch.rpm
 ```
 
 Then hard-reload Cockpit in the browser so it drops the cached bundle. If the
@@ -241,6 +266,7 @@ view-only, log filters) live in `localStorage`.
 | Connects to the wrong session | Check the RDP session mode in Settings. Screen sharing and Remote Login are different daemons on different ports. |
 | "Permission denied" alerts | Open your user menu in Cockpit and turn on *Administrative access*. |
 | Black screen after connecting | In screen-sharing mode the GNOME session must be unlocked and belong to the same user you use in Cockpit. |
+| VNC drops the connection straight after the password | Screen sharing has no monitor to record — the journal says `Unknown monitor`. Log in at the physical screen, or switch the VNC session to the virtual monitor in Settings. |
 | Changes seem not to apply after an update | Hard-reload the browser — Cockpit caches the bundle. |
 
 ## Known limitations
@@ -253,7 +279,8 @@ view-only, log filters) live in `localStorage`.
 - Image quality and compression are VNC-only `guacd` parameters and apply on the
   next connection, not to a running session. The RDP client has no equivalent.
 - In screen-sharing mode the remote resolution cannot be changed, so fullscreen
-  letterboxes when aspect ratios differ. Remote Login has no such limit.
+  letterboxes when aspect ratios differ. Remote Login and the VNC virtual
+  monitor have no such limit.
 - Managing user-scoped systemd units (`systemctl --user`) is not supported.
 - No automated end-to-end console tests.
 - English only (no i18n yet).

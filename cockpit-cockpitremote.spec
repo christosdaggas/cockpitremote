@@ -1,6 +1,6 @@
 Name:           cockpit-cockpitremote
 Version:        1.0.0
-Release:        7%{?dist}
+Release:        9%{?dist}
 Summary:        Web-based remote desktop for Cockpit
 License:        LGPL-2.1-or-later
 URL:            https://github.com/christosdaggas/cockpitremote
@@ -40,6 +40,22 @@ systemctl enable --now guacd.service >/dev/null 2>&1 || :
 /usr/share/metainfo/io.github.christosdaggas.cockpitremote.metainfo.xml
 
 %changelog
+* Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-9
+- Add a VNC session selector in Settings, matching the RDP one: share the
+  logged-in desktop, or give the connection its own virtual monitor so VNC
+  works with no physical screen attached
+- Report the VNC screen mode on the Dashboard and warn that screen sharing
+  refuses connections when no session is logged in at a monitor, which GNOME
+  otherwise only reports as "Unknown monitor" in its journal
+
+* Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-8
+- Stop the remote screen overhanging the console to the right and bottom in
+  fullscreen: the remote pointer is clipped at the screen edge instead of
+  enlarging the scroll area, and scaling now measures the space left by the
+  scrollbars rather than the space they occupy
+- Do not scroll the console at all while "Scale to fit" is on, since the
+  display is sized to the box
+
 * Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-7
 - Stop forcing a layout reflow and three inline style writes on every synced
   frame; the console is only rescaled when its size or the remote resolution

@@ -57,11 +57,26 @@ function sendClipboardText(client: GuacamoleClient, text: string): void {
     writer.sendEnd();
 }
 
+/**
+ * The console box measured on its content edge.
+ *
+ * getBoundingClientRect() reports the border box, which still counts the space
+ * taken by a visible scrollbar. Scaling the display from that number hands it
+ * more room than it really has, so the picture overhangs by the scrollbar's
+ * width and the scrollbar can never go away — each resize pushes it further
+ * out. clientWidth/clientHeight leave the scrollbars out, and being integers
+ * they also let the remote resolution match the box exactly, which keeps the
+ * image at 1:1 instead of resampling it by a fraction of a pixel.
+ */
+function consoleBox(container: HTMLDivElement): { width: number; height: number } {
+    return { width: container.clientWidth, height: container.clientHeight };
+}
+
 function displaySize(container: HTMLDivElement): { width: number; height: number } {
-    const rect = container.getBoundingClientRect();
+    const box = consoleBox(container);
     return {
-        width: Math.max(640, Math.round(rect.width || container.clientWidth || 1280)),
-        height: Math.max(480, Math.round(rect.height || container.clientHeight || 800)),
+        width: Math.max(640, box.width || 1280),
+        height: Math.max(480, box.height || 800),
     };
 }
 
@@ -89,7 +104,7 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
 
     /**
      * Scaling runs once per synced frame, so it must not touch layout unless
-     * something actually changed: getBoundingClientRect() forces a reflow, and
+     * something actually changed: measuring the box forces a reflow, and
      * Guacamole's scale() rewrites three inline styles. The console box only
      * ever resizes through the ResizeObserver, so its measurement is cached and
      * refreshed on demand, and the scale itself is written only when it (or the
@@ -107,9 +122,9 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
         const cache = scaleCacheRef.current;
 
         if (remeasure || !cache.boxWidth || !cache.boxHeight) {
-            const rect = target.getBoundingClientRect();
-            cache.boxWidth = rect.width || target.clientWidth;
-            cache.boxHeight = rect.height || target.clientHeight;
+            const box = consoleBox(target);
+            cache.boxWidth = box.width;
+            cache.boxHeight = box.height;
         }
 
         let scale = 1;
@@ -169,7 +184,9 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
     }, [clearConnectTimeout, protocol, teardown]);
 
     useEffect(() => {
-        applyScale();
+        // Remeasure: toggling the preference also switches the box between
+        // hidden and scrolling overflow, which changes the room it has.
+        applyScale(true);
     }, [prefs.scaleViewport, applyScale]);
 
     useEffect(() => {

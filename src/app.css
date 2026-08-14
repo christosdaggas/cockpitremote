@@ -105,6 +105,13 @@ body {
     justify-content: safe center;
 }
 
+/* With "Scale to fit" on, the display is sized to the box, so nothing can be
+   scrolled to; hiding the overflow keeps a sub-pixel rounding difference from
+   raising scrollbars that would then eat into the space being scaled against. */
+.ctr-console-canvas-fit {
+    overflow: hidden;
+}
+
 .ctr-console-canvas-connected,
 .ctr-console-canvas-connected * {
     cursor: none !important;
@@ -116,6 +123,12 @@ body {
     /* Guacamole sizes this box to the scaled display; as a flex item it must
        not be shrunk, or the image overflows it once "Scale to fit" is off. */
     flex: none;
+    /* Guacamole draws the remote pointer in its own layer inside this box and
+       moves it with a transform, so at the right or bottom edge the cursor
+       image hangs past the screen rectangle. Unclipped it enlarges the scroll
+       area and pops up scrollbars whenever the pointer reaches an edge. A real
+       screen clips its cursor the same way. */
+    overflow: hidden;
 }
 
 /* The plugin runs inside Cockpit's iframe, where vh units resolve against the

@@ -135,6 +135,7 @@ function GuacdConsole({
                     <StackItem>
                         <GuacdScreen screenRef={screenRef} containerRef={containerRef} state={guacd.state} target={target}
                                       protocol={protocol}
+                                      scaleToFit={prefs.scaleViewport}
                                       onConnect={connect} />
                     </StackItem>
                 </Stack>

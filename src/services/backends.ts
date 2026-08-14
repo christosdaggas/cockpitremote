@@ -1,5 +1,5 @@
 import { BACKENDS, type BackendDef } from "../constants";
-import type { BackendInfo, ListeningSocket, SessionInfo } from "../types";
+import type { BackendInfo, GrdVncScreenShareMode, ListeningSocket, SessionInfo } from "../types";
 import { extractVersion, parseGrdStatus, parseUnitFiles, type GrdStatus } from "../utils/parse";
 import {
     buildGrdctlStatusArgs,
@@ -9,6 +9,7 @@ import {
 } from "./commands";
 import { probe, spawn } from "./spawn";
 import { getListeningProcessSockets } from "./network";
+import { getVncScreenShareMode } from "./screenshare";
 import { getServiceStatus } from "./systemd";
 
 /*
@@ -101,6 +102,7 @@ async function detectOne(def: BackendDef, unitFiles: string[], processSockets: L
     let supported = def.manageable;
     let detectedPort: number | null = null;
     let remoteLoginPort: number | null = null;
+    let vncScreenShareMode: GrdVncScreenShareMode | null = null;
     if ((def.id === "grd" || def.id === "grd-rdp") && binaryPath) {
         // stderr must stay out of the parsed stream (err:"message" overrides
         // probe's err:"out"): grdctl mixes GLib warnings into the output.
@@ -141,8 +143,19 @@ async function detectOne(def: BackendDef, unitFiles: string[], processSockets: L
                     "versions are RDP-only) — the console cannot connect to it.");
             } else {
                 detectedPort = grd.vncPort;
+                vncScreenShareMode = await getVncScreenShareMode();
                 notes.push("Runs in the logged-in user's session — service control and settings apply " +
                     "to the user you are logged into Cockpit as.");
+                if (vncScreenShareMode === "mirror-primary")
+                    notes.push("Screen sharing is selected, so VNC records the primary monitor of the " +
+                        "logged-in GNOME session. With nobody logged in at a monitor — after a reboot, " +
+                        "or when the only session is a headless Remote Login — there is nothing to " +
+                        "record, and connections are dropped right after authentication. Pick the " +
+                        "virtual monitor under Settings for access that needs no physical screen.");
+                else if (vncScreenShareMode === "extend")
+                    notes.push("A virtual monitor is selected, so VNC creates its own screen for each " +
+                        "connection and follows the resolution the browser asks for. It needs no " +
+                        "physical monitor and does not show the physical desktop.");
                 notes.push("Its VNC server listens on all network interfaces and cannot be limited to " +
                     "127.0.0.1. The console tunnels through Cockpit either way — consider blocking " +
                     "outside access to the VNC port with a firewall rule.");
@@ -176,6 +189,7 @@ async function detectOne(def: BackendDef, unitFiles: string[], processSockets: L
         defaultPort: def.defaultPort,
         detectedPort,
         remoteLoginPort,
+        vncScreenShareMode,
     };
 }
 

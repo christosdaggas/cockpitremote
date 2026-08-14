@@ -102,6 +102,17 @@ export function parseSessionIds(text: string): string[] {
         .filter(id => id !== undefined && id.length > 0);
 }
 
+/**
+ * Unwraps the single GVariant `gsettings get` prints. Strings and enums come
+ * back quoted ("'extend'\n"); anything else is handed back trimmed.
+ */
+export function parseGsettingsValue(text: string): string {
+    const value = text.trim();
+    return value.length >= 2 && value.startsWith("'") && value.endsWith("'")
+        ? value.slice(1, -1)
+        : value;
+}
+
 /** Pulls the first version-looking token (e.g. "1.13.1") out of tool output. */
 export function extractVersion(text: string): string | null {
     const m = /(\d+\.\d+(?:\.\d+)*)/.exec(text);

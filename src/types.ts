@@ -11,6 +11,17 @@ export type BackendProtocol = "vnc" | "rdp";
  */
 export type GrdRdpMode = "screen-share" | "remote-login";
 
+/**
+ * Where GNOME Remote Desktop's VNC endpoint gets a screen from. grdctl has no
+ * subcommand for it, so it lives in GSettings:
+ *  - "mirror-primary"  records the primary monitor of the logged-in GNOME
+ *    session. Nobody logged in at a monitor means nothing to record, and the
+ *    connection is dropped right after authentication.
+ *  - "extend"          creates a virtual monitor for the connection, so it
+ *    works headless and follows the resolution the client asks for.
+ */
+export type GrdVncScreenShareMode = "mirror-primary" | "extend";
+
 export type SystemdAction = "start" | "stop" | "restart" | "enable" | "disable";
 
 /**
@@ -56,6 +67,11 @@ export interface BackendInfo {
      * Null for VNC and whenever headless RDP is unavailable.
      */
     remoteLoginPort: number | null;
+    /**
+     * How the VNC endpoint obtains a screen. Null for RDP and whenever the
+     * setting could not be read (RDP-only builds have no such schema).
+     */
+    vncScreenShareMode: GrdVncScreenShareMode | null;
 }
 
 export interface ListeningSocket {

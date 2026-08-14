@@ -18,7 +18,8 @@ import {
 
 import { BACKENDS, DEFAULT_RDP_PORT, backendDef } from "../constants";
 import { useNotify } from "../notifications";
-import type { BackendId, BackendInfo, GrdRdpMode, RemoteConfig } from "../types";
+import { setVncScreenShareMode } from "../services/screenshare";
+import type { BackendId, BackendInfo, GrdRdpMode, GrdVncScreenShareMode, RemoteConfig } from "../types";
 import { toUserMessage } from "../utils/errors";
 import {
     ValidationError,
@@ -114,12 +115,24 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
     const [saving, setSaving] = useState(false);
     const [passwordOpen, setPasswordOpen] = useState(false);
 
+    /*
+     * The VNC screen-share mode is GNOME's own setting, not part of the
+     * plugin's config file, so it is held apart from the form: its starting
+     * value comes from detection and it is written back to the host on save.
+     */
+    const detectedVncMode = backends?.find(b => b.id === "grd")?.vncScreenShareMode ?? null;
+    const [vncMode, setVncMode] = useState<GrdVncScreenShareMode | null>(detectedVncMode);
+
     // Re-sync the form when the config changes elsewhere (backend selected on
     // the Dashboard, config loaded after mount).
     useEffect(() => {
         setForm(fromConfig(config));
         setErrors({});
     }, [config]);
+
+    useEffect(() => {
+        setVncMode(detectedVncMode);
+    }, [detectedVncMode]);
 
     const set = (field: keyof FormState, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -168,6 +181,18 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
         setSaving(true);
         try {
             await save(next);
+            // Only written when it actually changed, so saving an unrelated
+            // field never reconfigures the desktop behind the user's back.
+            if (vncMode && vncMode !== detectedVncMode) {
+                try {
+                    await setVncScreenShareMode(vncMode);
+                } catch (err) {
+                    notify("warning", "Settings saved, but the VNC screen was left unchanged",
+                           toUserMessage(err));
+                    return;
+                }
+                await onRefresh();
+            }
             notify("success", "Settings saved");
         } catch (err) {
             notify("danger", "Could not save settings", toUserMessage(err));
@@ -250,6 +275,34 @@ export function SettingsTab({ config, save, onRefresh, backends }: SettingsTabPr
                                         {form.rdpMode === "remote-login"
                                             ? "A headless session adopts the resolution the browser asks for, so fullscreen fills the window exactly. You will not see what is on the physical screen."
                                             : "Mirrors the physical monitor at its own fixed resolution, so fullscreen can letterbox when the aspect ratios differ."}
+                                    </HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
+                        </FormGroup>
+                    )}
+
+                    {selectedDef?.protocol === "vnc" && vncMode !== null && (
+                        <FormGroup label="VNC session" fieldId="ctr-vnc-share-mode">
+                            <FormSelect id="ctr-vnc-share-mode" value={vncMode}
+                                        onChange={(_event, value) =>
+                                            setVncMode(value === "extend" ? "extend" : "mirror-primary")}
+                                        aria-label="VNC session">
+                                <FormSelectOption value="mirror-primary"
+                                                  label="Screen sharing — mirror the logged-in desktop" />
+                                <FormSelectOption value="extend"
+                                                  label="Virtual monitor — headless session" />
+                            </FormSelect>
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem>
+                                        {vncMode === "extend"
+                                            ? "VNC creates its own screen for the connection and follows the resolution the browser asks for, so fullscreen fills the window and no physical monitor is needed. You will not see what is on the physical screen."
+                                            : "Records the primary monitor of the logged-in GNOME session at its own fixed resolution. With nobody logged in at a monitor there is nothing to record, and the connection is dropped right after authentication."}
+                                    </HelperTextItem>
+                                    <HelperTextItem>
+                                        This is GNOME&apos;s own setting for this user, not a plugin
+                                        preference. Saving applies it to the next connection; sessions
+                                        already running keep the screen they started with.
                                     </HelperTextItem>
                                 </HelperText>
                             </FormHelperText>

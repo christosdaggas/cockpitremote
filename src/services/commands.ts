@@ -5,7 +5,7 @@
  * codebase, so nothing here can be turned into shell injection.
  */
 
-import type { SystemdAction, UnitScope } from "../types";
+import type { GrdVncScreenShareMode, SystemdAction, UnitScope } from "../types";
 import {
     ValidationError,
     validateBinaryName,
@@ -94,6 +94,26 @@ export function buildGrdctlVncSetAuthMethodArgs(method: "password" | "prompt"): 
     if (method !== "password" && method !== "prompt")
         throw new ValidationError(`Unsupported GNOME Remote Desktop VNC auth method: ${JSON.stringify(method)}.`);
     return ["grdctl", "vnc", "set-auth-method", method];
+}
+
+/*
+ * grdctl exposes no VNC screen-share mode, so it is read and written straight
+ * from GNOME Remote Desktop's GSettings schema. Schema and key are constants
+ * here and the value is checked against the schema's enum, so no caller can
+ * aim gsettings at another setting.
+ */
+const VNC_SCREEN_SHARE_SCHEMA = "org.gnome.desktop.remote-desktop.vnc";
+const VNC_SCREEN_SHARE_KEY = "screen-share-mode";
+const VNC_SCREEN_SHARE_MODES: readonly GrdVncScreenShareMode[] = ["mirror-primary", "extend"];
+
+export function buildVncScreenShareModeGetArgs(): string[] {
+    return ["gsettings", "get", VNC_SCREEN_SHARE_SCHEMA, VNC_SCREEN_SHARE_KEY];
+}
+
+export function buildVncScreenShareModeSetArgs(mode: GrdVncScreenShareMode): string[] {
+    if (!VNC_SCREEN_SHARE_MODES.includes(mode))
+        throw new ValidationError(`Unsupported VNC screen-share mode: ${JSON.stringify(mode)}.`);
+    return ["gsettings", "set", VNC_SCREEN_SHARE_SCHEMA, VNC_SCREEN_SHARE_KEY, mode];
 }
 
 export function buildSsListeningArgs(): string[] {
