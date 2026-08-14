@@ -41,6 +41,21 @@ function level(value: number | undefined, fallback: number): string {
     return String(Math.min(9, Math.max(0, value as number)));
 }
 
+/*
+ * A Guacamole element is prefixed with its length in Unicode code points, but
+ * a JavaScript string is UTF-16, where anything outside the basic plane (an
+ * emoji, say) is two units and would be counted twice. guacd would then read
+ * past the element, swallow its terminator and lose sync with the stream —
+ * the framing flaw Apache fixed in 1.5.2 (CVE-2023-30575). Surrogate pairs are
+ * subtracted instead of spreading the string into an array of code points,
+ * because this runs on every mouse move and every clipboard blob.
+ */
+const SURROGATE_PAIR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+
+function codePointLength(value: string): number {
+    return value.length - (value.match(SURROGATE_PAIR_RE)?.length ?? 0);
+}
+
 export function encodeInstruction(...elements: unknown[]): string {
     if (elements.length === 0)
         return "";
@@ -51,7 +66,7 @@ export function encodeInstruction(...elements: unknown[]): string {
         // all keyboard input. Handshake arguments are already strings and are
         // therefore unaffected.
         const value = typeof element === "boolean" ? (element ? "1" : "0") : String(element);
-        return `${value.length}.${value}`;
+        return `${codePointLength(value)}.${value}`;
     }).join(",") + ";";
 }
 

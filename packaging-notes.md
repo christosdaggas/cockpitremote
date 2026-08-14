@@ -57,7 +57,7 @@ package formats.
 ```spec
 Name:           cockpit-cockpitremote
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Web-based remote desktop for Cockpit
 License:        LGPL-2.1-or-later
 URL:            https://github.com/christosdaggas/cockpitremote

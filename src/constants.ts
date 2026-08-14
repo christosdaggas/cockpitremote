@@ -11,6 +11,14 @@ export const GUACD_UNIT = "guacd.service";
 export const RDP_DPI = 96;
 export const CONNECT_TIMEOUT_MS = 15000;
 
+/**
+ * Cap on a single clipboard selection arriving from the remote desktop. The
+ * stream is server-driven and has no end the browser can rely on, so without a
+ * limit a misbehaving desktop could grow the page's memory without bound. A
+ * mebibyte of text is far past any selection a person makes by hand.
+ */
+export const CLIPBOARD_MAX_CHARS = 1024 * 1024;
+
 export const LOG_LINE_CHOICES = [100, 200, 500, 1000] as const;
 
 /** journalctl -p levels offered in the UI (null = all). */

@@ -143,7 +143,7 @@ Download the RPM from the [releases page](https://github.com/christosdaggas/cock
 and install it:
 
 ```sh
-sudo dnf install ./cockpit-cockpitremote-1.0.0-9.fc44.noarch.rpm
+sudo dnf install ./cockpit-cockpitremote-1.0.0-10.fc44.noarch.rpm
 ```
 
 Then hard-reload Cockpit in the browser so it drops the cached bundle. If the

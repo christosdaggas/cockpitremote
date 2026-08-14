@@ -1,6 +1,6 @@
 Name:           cockpit-cockpitremote
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Web-based remote desktop for Cockpit
 License:        LGPL-2.1-or-later
 URL:            https://github.com/christosdaggas/cockpitremote
@@ -40,6 +40,13 @@ systemctl enable --now guacd.service >/dev/null 2>&1 || :
 /usr/share/metainfo/io.github.christosdaggas.cockpitremote.metainfo.xml
 
 %changelog
+* Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-10
+- Count Guacamole instruction lengths in Unicode code points instead of UTF-16
+  units, so a character outside the basic plane can no longer desynchronise the
+  stream to guacd (the framing flaw of CVE-2023-30575)
+- Cap a clipboard selection arriving from the remote desktop, which was
+  collected without any limit and could grow the page's memory unchecked
+
 * Fri Aug 14 2026 Christos A. Daggas <info@hotwebdesign.gr> - 1.0.0-9
 - Add a VNC session selector in Settings, matching the RDP one: share the
   logged-in desktop, or give the connection its own virtual monitor so VNC

@@ -32,6 +32,28 @@ describe("guacd tunnel helpers", () => {
         expect(encodeInstruction("connect", "true", "false")).toBe("7.connect,4.true,5.false;");
     });
 
+    /*
+     * Lengths are counted in Unicode code points, not UTF-16 units. Counting
+     * "😀" as 2 makes guacd read one character too many, eat the terminator and
+     * lose sync — the framing flaw of CVE-2023-30575.
+     */
+    it("counts element lengths in code points, not UTF-16 units", () => {
+        expect(encodeInstruction("connect", "😀")).toBe("7.connect,1.😀;");
+        expect(encodeInstruction("connect", "a😀b")).toBe("7.connect,3.a😀b;");
+        expect(encodeInstruction("connect", "😀😀")).toBe("7.connect,2.😀😀;");
+    });
+
+    it("counts characters outside the basic plane that are not emoji", () => {
+        // U+1D11E MUSICAL SYMBOL G CLEF, and a BMP character that must stay 1.
+        expect(encodeInstruction("name", "\u{1D11E}")).toBe("4.name,1.\u{1D11E};");
+        expect(encodeInstruction("name", "ñ")).toBe("4.name,1.ñ;");
+    });
+
+    it("does not treat unpaired surrogates as a pair", () => {
+        // A lone high surrogate really is one UTF-16 unit and one code point.
+        expect(encodeInstruction("name", "\uD83D")).toBe("4.name,1.\uD83D;");
+    });
+
     it("maps guacd RDP argument names to connection values", () => {
         expect(buildGuacdConnectArgs([
             "VERSION_1_5_0",

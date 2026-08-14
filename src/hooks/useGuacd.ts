@@ -7,7 +7,7 @@ import Guacamole, {
     type GuacamoleStatus,
 } from "guacamole-common-js";
 
-import { CONNECT_TIMEOUT_MS, RDP_DPI } from "../constants";
+import { CLIPBOARD_MAX_CHARS, CONNECT_TIMEOUT_MS, RDP_DPI } from "../constants";
 import { RawGuacdTunnel, type GuacdCredentials, type GuacdProtocol } from "../services/guacdTunnel";
 import type { UiPrefs } from "../types";
 import type { ConsoleState } from "./consoleState";
@@ -49,6 +49,38 @@ function isPasteShortcut(modifiers: GuacamoleKeyboardModifiers, keysym: number):
     if (modifiers.alt || (keysym !== KEY_V_LOWER && keysym !== KEY_V_UPPER))
         return false;
     return modifiers.ctrl || modifiers.meta;
+}
+
+export interface ClipboardCollector {
+    /** Adds a chunk; true exactly once, on the chunk that crosses the cap. */
+    add: (chunk: string) => boolean;
+    /** The collected selection, or "" once the cap was crossed. */
+    text: () => string;
+}
+
+/**
+ * Gathers a remote clipboard selection, giving up if it grows past
+ * CLIPBOARD_MAX_CHARS. What has been collected is dropped at that point rather
+ * than truncated: half a selection pasted into the local clipboard would be
+ * worse than none.
+ */
+export function createClipboardCollector(limit = CLIPBOARD_MAX_CHARS): ClipboardCollector {
+    let text = "";
+    let overflowed = false;
+    return {
+        add(chunk) {
+            if (overflowed)
+                return false;
+            if (text.length + chunk.length > limit) {
+                overflowed = true;
+                text = "";
+                return true;
+            }
+            text += chunk;
+            return false;
+        },
+        text: () => text,
+    };
 }
 
 function sendClipboardText(client: GuacamoleClient, text: string): void {
@@ -373,14 +405,18 @@ export function useGuacd(container: RefObject<HTMLDivElement>, prefs: UiPrefs, p
                 return;
             }
             const reader = new Guacamole.StringReader(stream);
-            let text = "";
+            const collector = createClipboardCollector();
             reader.ontext = chunk => {
-                text += chunk;
+                // Refusing the stream once, on the blob that crosses the cap:
+                // blobs already in flight still arrive and must not re-ack.
+                if (collector.add(chunk))
+                    stream.sendAck("Clipboard selection is too large", 0x030d);
             };
             reader.onend = () => {
                 // Best effort: browsers may refuse a clipboard write that is
                 // not tied to a user gesture, in which case the remote
                 // selection simply stays on the remote.
+                const text = collector.text();
                 if (text)
                     navigator.clipboard?.writeText(text).catch(() => {});
             };
