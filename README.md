@@ -136,8 +136,12 @@ Two details worth knowing if you read the code:
 
 - Cockpit ≥ 266 on the host
 - GNOME Remote Desktop with RDP or VNC enabled
-- `guacd` plus `libguac-client-rdp` / `libguac-client-vnc` on the host — pulled
-  in automatically by the RPM, which also enables and starts `guacd.service`
+- **`guacd`** — the Guacamole proxy daemon. This package does **not** pull it in
+  automatically. You must install it separately:
+  - **Fedora / RHEL:** `sudo dnf install guacd` (also installs `libguac-client-rdp` / `libguac-client-vnc`)
+  - **Debian / Ubuntu:** Download from [Apache Guacamole](https://guacamole.apache.org/releases/1.6.0/)
+    and follow the [installation instructions](https://guacamole.apache.org/doc/gug/installing-guacamole.html).
+    The `guacd` package is not in the official Debian/Ubuntu repositories.
 - Administrative access in Cockpit for service control, saving settings and
   password management. Read-only use works without it; the UI degrades
   gracefully and says what is missing.
@@ -150,11 +154,20 @@ Ubuntu 22.04+, openSUSE) are expected to work but are not routinely tested.
 
 ### From a release (recommended)
 
-Download the RPM from the [releases page](https://github.com/christosdaggas/cockpitremote/releases)
-and install it:
+Download the RPM or DEB from the
+[releases page](https://github.com/christosdaggas/cockpitremote/releases).
+
+**Fedora / RHEL:**
 
 ```sh
-sudo dnf install ./cockpit-cockpitremote-1.0.0-11.fc44.noarch.rpm
+sudo dnf install ./cockpit-cockpitremote-1.0.0-1.fc44.noarch.rpm
+```
+
+**Debian / Ubuntu:**
+
+```sh
+sudo dpkg -i cockpit-cockpitremote_1.0.0_all.deb
+sudo apt-get install -f
 ```
 
 Then hard-reload Cockpit in the browser so it drops the cached bundle. If the
@@ -184,7 +197,9 @@ make devel-install      # builds and symlinks dist/ into ~/.local/share/cockpit
 make devel-uninstall    # removes the symlink
 ```
 
-## Quick start on Fedora / GNOME
+## Quick start
+
+### Fedora / GNOME
 
 ```sh
 sudo dnf install -y gnome-remote-desktop guacd libguac-client-rdp libguac-client-vnc
@@ -208,6 +223,26 @@ grdctl vnc set-password
 To use **Remote Login** instead of screen sharing, enable it in GNOME Settings
 under *System → Remote Desktop → Remote Login*, then pick it in the plugin's
 Settings.
+
+### Debian / Ubuntu
+
+Install `guacd` from the
+[Apache Guacamole](https://guacamole.apache.org/doc/gug/installing-guacamole.html)
+release tarball (not available in official repos):
+
+```sh
+# Download and extract guacamole-server (includes guacd)
+wget https://dlcdn.apache.org/guacamole/1.6.0/source/guacamole-server-1.6.0.tar.gz
+tar xzf guacamole-server-1.6.0.tar.gz
+cd guacamole-server-1.6.0
+./configure --with-init-dir=/etc/init.d
+make
+sudo make install
+sudo ldconfig
+sudo systemctl enable --now guacd
+```
+
+Then enable GNOME Remote Desktop and connect as on Fedora.
 
 ## Building and developing
 
